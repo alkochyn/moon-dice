@@ -4,7 +4,9 @@ import preact from "@preact/preset-vite"
 import { viteSingleFile } from "vite-plugin-singlefile"
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string }
-const buildTime = new Date().toISOString().slice(0, 16).replace("T", " ")
+// UTC помечаем явно: отчёты приходят от игроков из разных поясов, и время сборки
+// без метки читается как местное.
+const buildTime = `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC`
 const swVersion = `${pkg.version}-${Date.now().toString(36)}`
 
 /** Подставляет версию в service worker, чтобы новая сборка вытеснила старый кэш. */

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks"
 import { getMiro, isInsideMiro, isPanelMode, type BoardStatus } from "../board/sdk"
+import { probeBoardStorage } from "../board/storage"
 
 /**
  * Экран для разбора полётов: игрок открывает, жмёт «скопировать» и присылает
@@ -27,13 +28,38 @@ const swState = (): string => {
   return navigator.serviceWorker.controller ? "активен, панель работает офлайн" : "не активен"
 }
 
+/**
+ * Панель живёт в стороннем iframe внутри miro.com, а строгие настройки
+ * приватности (Firefox, Safari, Brave, блокировщики) режут третьим сторонам
+ * хранилище — причём обращение к localStorage не возвращает пустоту, а бросает
+ * исключение. Для приложения, которое читает его на старте, это белый экран,
+ * поэтому проверяем прямо и показываем текстом.
+ */
+const localStorageState = (): string => {
+  const key = "__dice_probe"
+
+  try {
+    localStorage.setItem(key, "1")
+    const readBack = localStorage.getItem(key) === "1"
+    localStorage.removeItem(key)
+    return readBack ? "доступно" : "не сохраняет значения"
+  } catch (error) {
+    return `заблокировано браузером (${(error as Error).name})`
+  }
+}
+
 export const Diagnostics = ({ status }: Props) => {
   const [ping, setPing] = useState("проверяем…")
+  const [boardStorage, setBoardStorage] = useState("проверяем…")
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     void pingSelf().then(setPing)
   }, [])
+
+  useEffect(() => {
+    void probeBoardStorage().then(setBoardStorage)
+  }, [status])
 
   const rows: Rows = [
     ["Версия", `${__APP_VERSION__} от ${__BUILD_TIME__}`],
@@ -42,6 +68,9 @@ export const Diagnostics = ({ status }: Props) => {
     ["Контекст", isInsideMiro() ? (isPanelMode() ? "панель в Miro" : "фоновый кадр в Miro") : "обычная вкладка"],
     ["Хостинг", location.origin],
     ["Отклик", ping],
+    ["Хранилище доски", boardStorage],
+    ["Хранилище браузера", localStorageState()],
+    ["Куки", navigator.cookieEnabled ? "разрешены" : "заблокированы для стороннего кадра"],
     ["Офлайн-кэш", swState()],
     ["Браузер", navigator.userAgent],
   ]

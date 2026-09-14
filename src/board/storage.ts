@@ -65,6 +65,23 @@ export const updateKey = async <T>(key: string, mutate: (current: T | undefined)
   return null
 }
 
+/**
+ * Диагностика: отвечает ли хранилище доски прямо сейчас. В отличие от readKey
+ * не глотает ошибку, а возвращает её текст — именно он и нужен, когда у игрока
+ * «ничего не работает», а почему — неизвестно.
+ */
+export const probeBoardStorage = async (): Promise<string> => {
+  const collection = getCollection()
+  if (!collection) return "недоступно: нет SDK"
+
+  try {
+    await collection.get("__probe")
+    return "доступно"
+  } catch (error) {
+    return `ошибка: ${(error as Error).name} ${(error as Error).message}`
+  }
+}
+
 export const subscribeKey = <T>(key: string, handler: (value: T | undefined) => void): (() => void) => {
   const collection = getCollection()
   if (!collection) return () => {}
