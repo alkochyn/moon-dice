@@ -58,9 +58,41 @@
       }
       textarea {
         width: 100%;
-        height: 130px;
+        height: 150px;
         margin-top: 12px;
         font: 12px/1.4 ui-monospace, Consolas, monospace;
+      }
+      .ask {
+        border: 1px solid #8884;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-top: 16px;
+      }
+      .warn {
+        margin-top: 0;
+        color: inherit;
+      }
+      .field {
+        display: block;
+        margin-top: 8px;
+        border: 0;
+        padding: 0;
+      }
+      .field input[type="text"] {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 6px 8px;
+        font: inherit;
+      }
+      fieldset.field legend {
+        padding: 0;
+        color: #888;
+        font-size: 13px;
+      }
+      fieldset.field label {
+        margin-right: 12px;
+        white-space: nowrap;
       }
     </style>
   </head>
@@ -74,6 +106,23 @@
       Строки «кандидат» — площадки, куда кубомет может переехать. Если Cloudflare и GitHub у вас висят или отвечают
       заметно дольше остальных, а кандидаты открываются быстро, значит переезд решит проблему.
     </p>
+
+    <div class="ask">
+      <p class="warn">
+        Если у вас включён VPN — выключите его на время проверки и перезагрузите страницу. Через VPN замер покажет сеть
+        VPN-сервера, а не вашего провайдера, и пользы от него не будет. После проверки включайте обратно.
+      </p>
+      <label class="field">
+        Имя, город, провайдер:
+        <input id="who" type="text" placeholder="например: Акигал, Москва, МТС" autocomplete="off" />
+      </label>
+      <fieldset class="field">
+        <legend>VPN во время этой проверки</legend>
+        <label><input type="radio" name="vpn" value="выключен" /> выключен</label>
+        <label><input type="radio" name="vpn" value="включён" /> включён</label>
+        <label><input type="radio" name="vpn" value="не знаю" /> не знаю</label>
+      </fieldset>
+    </div>
 
     <table>
       <thead>
@@ -153,8 +202,22 @@
           })
       }
 
+      function answeredVpn() {
+        var checked = document.querySelector("input[name=vpn]:checked")
+        return checked ? checked.value : "не указано"
+      }
+
       function renderReport() {
-        var lines = ["Пробник кубомета", new Date().toString(), "Хост страницы: " + location.origin, ""]
+        // Кто мерил и через что — без этих двух строк отчёты от разных игроков
+        // сливаются в кашу, а замер через VPN вообще ничего не говорит о провайдере.
+        var lines = [
+          "Пробник кубомета",
+          new Date().toString(),
+          "Игрок: " + (document.getElementById("who").value.trim() || "не указан"),
+          "VPN: " + answeredVpn(),
+          "Хост страницы: " + location.origin,
+          "",
+        ]
         for (var i = 0; i < TARGETS.length; i++) {
           lines.push(results[i] || TARGETS[i].name + ": ещё проверяется")
         }
@@ -164,6 +227,11 @@
 
       TARGETS.forEach(probe)
       renderReport()
+
+      document.getElementById("who").addEventListener("input", renderReport)
+      Array.prototype.forEach.call(document.querySelectorAll("input[name=vpn]"), function (radio) {
+        radio.addEventListener("change", renderReport)
+      })
 
       document.getElementById("copy").addEventListener("click", function () {
         var field = document.getElementById("report")
