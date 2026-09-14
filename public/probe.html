@@ -70,6 +70,10 @@
       Страница проверяет, какие хосты открываются у вас из браузера. Дождитесь, пока все строки перестанут быть серыми,
       нажмите «Скопировать отчёт» и пришлите его мастеру. Ничего никуда не отправляется автоматически.
     </p>
+    <p>
+      Строки «кандидат» — площадки, куда кубомет может переехать. Если Cloudflare и GitHub у вас висят или отвечают
+      заметно дольше остальных, а кандидаты открываются быстро, значит переезд решит проблему.
+    </p>
 
     <table>
       <thead>
@@ -96,6 +100,11 @@
         { name: "unpkg (Cloudflare, эталон)", url: "https://unpkg.com/mirotone/dist/styles.css" },
         { name: "jsDelivr (Cloudflare)", url: "https://cdn.jsdelivr.net/npm/preact/package.json" },
         { name: "GitHub Pages", url: "https://pages.github.com/favicon.ico" },
+        // Кандидаты на основной хостинг: если Cloudflare и GitHub у игрока режутся,
+        // панель переедет на российское объектное хранилище. Эти эндпоинты отвечают
+        // 200/403 без авторизации — нам важен сам факт ответа и время.
+        { name: "Yandex Object Storage (кандидат)", url: "https://storage.yandexcloud.net/" },
+        { name: "Selectel S3 (кандидат)", url: "https://s3.ru-1.storage.selcloud.ru/" },
       ]
 
       var TIMEOUT_MS = 8000
