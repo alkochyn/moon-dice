@@ -90,7 +90,9 @@
       var TARGETS = [
         { name: "Miro (сама доска)", url: "https://miro.com/favicon.ico" },
         { name: "Miro Web SDK", url: "https://miro.com/app/static/sdk/v2/miro.js" },
-        { name: "Кубомет (этот хост)", url: location.origin + "/index.html" },
+        // Свой хост проверяем обычным запросом: он same-origin, поэтому виден
+        // настоящий код ответа. Путь относительный — зеркало живёт в подкаталоге.
+        { name: "Кубомет (этот хост)", url: new URL("index.html", location.href).toString(), sameOrigin: true },
         { name: "unpkg (Cloudflare, эталон)", url: "https://unpkg.com/mirotone/dist/styles.css" },
         { name: "jsDelivr (Cloudflare)", url: "https://cdn.jsdelivr.net/npm/preact/package.json" },
         { name: "GitHub Pages", url: "https://pages.github.com/favicon.ico" },
@@ -124,10 +126,17 @@
           finish(false, "не ответил за " + TIMEOUT_MS / 1000 + " с (похоже на блокировку)")
         }, TIMEOUT_MS)
 
-        fetch(target.url, { mode: "no-cors", cache: "no-store" })
-          .then(function () {
+        // Чужие хосты — только no-cors: ответ непрозрачный, видно лишь сам факт
+        // ответа. Для своего хоста запрос обычный, поэтому знаем реальный код.
+        fetch(target.url, target.sameOrigin ? { cache: "no-store" } : { mode: "no-cors", cache: "no-store" })
+          .then(function (response) {
             clearTimeout(timer)
-            finish(true, "доступен, " + (Date.now() - started) + " мс")
+            var ms = Date.now() - started
+            if (target.sameOrigin && !response.ok) {
+              finish(false, "ответил " + response.status + " за " + ms + " мс")
+              return
+            }
+            finish(true, "доступен, " + ms + " мс")
           })
           .catch(function (error) {
             clearTimeout(timer)
