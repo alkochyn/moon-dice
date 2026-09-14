@@ -1,0 +1,98 @@
+import { readKey, subscribeKey, updateKey } from "./storage"
+import { newId } from "./log"
+
+const LOCAL_KEY = "dice.presets.v1"
+const SHARED_KEY = "presets.shared"
+const userKey = (userId: string): string => `presets.user.${userId}`
+
+export interface Preset {
+  id: string
+  name: string
+  formula: string
+  color: string
+}
+
+export interface PresetBox {
+  updatedAt: number
+  items: Preset[]
+}
+
+export const PRESET_COLORS = ["slate", "red", "amber", "green", "blue", "violet"] as const
+
+export const DEFAULT_PRESETS: Preset[] = [
+  { id: "default-attack", name: "Атака", formula: "1d20+5", color: "red" },
+  { id: "default-damage", name: "Урон", formula: "1d8+3", color: "amber" },
+  { id: "default-save", name: "Спасбросок с преим.", formula: "d20adv", color: "green" },
+  { id: "default-stats", name: "Характеристика", formula: "4d6kh3", color: "blue" },
+]
+
+export const makePreset = (name: string, formula: string, color: string = "slate"): Preset => ({
+  id: newId(),
+  name: name.trim() || formula.trim(),
+  formula: formula.trim(),
+  color,
+})
+
+const isPreset = (value: unknown): value is Preset => {
+  const preset = value as Preset
+  return Boolean(preset) && typeof preset.id === "string" && typeof preset.formula === "string"
+}
+
+const sanitize = (items: unknown): Preset[] =>
+  Array.isArray(items) ? items.filter(isPreset).map((p) => ({ ...p, color: p.color || "slate" })) : []
+
+export const readLocalPresets = (): { items: Preset[]; updatedAt: number; firstRun: boolean } => {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY)
+    if (!raw) return { items: DEFAULT_PRESETS, updatedAt: 0, firstRun: true }
+    const parsed = JSON.parse(raw) as PresetBox
+    return { items: sanitize(parsed.items), updatedAt: parsed.updatedAt ?? 0, firstRun: false }
+  } catch {
+    return { items: DEFAULT_PRESETS, updatedAt: 0, firstRun: true }
+  }
+}
+
+export const writeLocalPresets = (box: PresetBox): void => {
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(box))
+  } catch {
+    // Не смертельно: пресеты останутся в памяти до конца сессии.
+  }
+}
+
+/**
+ * Личные пресеты живут в localStorage (работают и без доски), а копия уезжает
+ * в хранилище доски — чтобы не потерять их при смене браузера. При расхождении
+ * выигрывает более свежая по updatedAt сторона.
+ */
+export const syncPersonalPresets = async (userId: string, local: PresetBox): Promise<PresetBox> => {
+  const remote = await readKey<PresetBox>(userKey(userId))
+
+  if (remote && typeof remote.updatedAt === "number" && remote.updatedAt > local.updatedAt) {
+    const merged = { updatedAt: remote.updatedAt, items: sanitize(remote.items) }
+    writeLocalPresets(merged)
+    return merged
+  }
+
+  if (local.items.length) {
+    await updateKey<PresetBox>(userKey(userId), () => local)
+  }
+
+  return local
+}
+
+export const pushPersonalPresets = async (userId: string, box: PresetBox): Promise<void> => {
+  await updateKey<PresetBox>(userKey(userId), () => box)
+}
+
+export const readSharedPresets = async (): Promise<Preset[]> => {
+  const box = await readKey<PresetBox>(SHARED_KEY)
+  return sanitize(box?.items)
+}
+
+export const writeSharedPresets = async (items: Preset[]): Promise<void> => {
+  await updateKey<PresetBox>(SHARED_KEY, () => ({ updatedAt: Date.now(), items }))
+}
+
+export const subscribeSharedPresets = (handler: (items: Preset[]) => void): (() => void) =>
+  subscribeKey<PresetBox>(SHARED_KEY, (box) => handler(sanitize(box?.items)))

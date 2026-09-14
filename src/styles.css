@@ -1,0 +1,440 @@
+:root {
+  --bg: #ffffff;
+  --surface: #f5f6f8;
+  --surface-2: #ebedf0;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --border: #dcdfe4;
+  --accent: #4262ff;
+  --accent-text: #ffffff;
+  --danger: #d7373f;
+  --ok: #1f9d55;
+  --radius: 8px;
+  --chip-slate: #64748b;
+  --chip-red: #d7373f;
+  --chip-amber: #b45309;
+  --chip-green: #1f9d55;
+  --chip-blue: #2563eb;
+  --chip-violet: #7c3aed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17181c;
+    --surface: #202228;
+    --surface-2: #2a2d35;
+    --text: #ecedf0;
+    --muted: #9aa0ab;
+    --border: #343842;
+    --accent: #7b8cff;
+    --accent-text: #10121a;
+    --danger: #ff7a7a;
+    --ok: #4ade80;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  min-height: 100vh;
+}
+
+/* --- Статус --- */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+
+.status__dot--connected {
+  background: var(--ok);
+}
+
+.status__dot--offline {
+  background: var(--danger);
+}
+
+.status__spacer {
+  flex: 1;
+}
+
+.status__link {
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 12px;
+}
+
+/* --- Ввод формулы --- */
+.rollbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rollbar__row {
+  display: flex;
+  gap: 6px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.input--invalid {
+  border-color: var(--danger);
+}
+
+.btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--surface-2);
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn--ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.btn--icon {
+  padding: 4px 7px;
+  line-height: 1;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.dice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.dice-grid .btn {
+  padding: 7px 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Секции --- */
+.section {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.section__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.section__title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section__spacer {
+  flex: 1;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 2px;
+}
+
+.tab {
+  border: 0;
+  background: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tab--active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+}
+
+/* --- Пресеты --- */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--chip);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 5px 8px;
+  max-width: 100%;
+}
+
+.preset:hover {
+  background: var(--surface-2);
+}
+
+.preset__name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset__formula {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.preset-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.preset-form .input {
+  flex: 1 1 90px;
+}
+
+.colors {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.color {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--chip);
+  padding: 0;
+}
+
+.color--active {
+  border-color: var(--text);
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+/* --- Журнал --- */
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-anchor: none;
+}
+
+.entry {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 6px 8px;
+}
+
+.entry--mine {
+  border-color: var(--accent);
+}
+
+.entry__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.entry__user {
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry__label {
+  font-style: italic;
+}
+
+.entry__time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.entry__result {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.entry__total {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.entry__detail {
+  color: var(--muted);
+  font-size: 12px;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+.entry__formula {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- История формул --- */
+.history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.history-item {
+  border: 1px dashed var(--border);
+  background: none;
+  border-radius: var(--radius);
+  padding: 3px 7px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-item:hover {
+  color: var(--text);
+  border-style: solid;
+}
+
+/* --- Диагностика --- */
+.diag {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.diag__row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.diag__key {
+  color: var(--muted);
+  flex: none;
+  width: 96px;
+}
+
+.diag__value {
+  word-break: break-all;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

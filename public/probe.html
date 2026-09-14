@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Пробник доступности — Кубомет</title>
+    <style>
+      body {
+        margin: 0 auto;
+        padding: 16px;
+        max-width: 720px;
+        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      p {
+        color: #666;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid #8883;
+        vertical-align: top;
+      }
+      th {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #888;
+      }
+      code {
+        font-size: 12px;
+        word-break: break-all;
+      }
+      .ok {
+        color: #1f9d55;
+        font-weight: 600;
+      }
+      .fail {
+        color: #d7373f;
+        font-weight: 600;
+      }
+      .wait {
+        color: #888;
+      }
+      button {
+        font: inherit;
+        padding: 8px 14px;
+        margin-top: 12px;
+        cursor: pointer;
+      }
+      textarea {
+        width: 100%;
+        height: 130px;
+        margin-top: 12px;
+        font: 12px/1.4 ui-monospace, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Пробник доступности</h1>
+    <p>
+      Страница проверяет, какие хосты открываются у вас из браузера. Дождитесь, пока все строки перестанут быть серыми,
+      нажмите «Скопировать отчёт» и пришлите его мастеру. Ничего никуда не отправляется автоматически.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Что проверяем</th>
+          <th>Результат</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <button id="copy">Скопировать отчёт</button>
+    <textarea id="report" readonly></textarea>
+
+    <script>
+      // Хосты сравниваем попарно: если miro.com открывается, а хостинг панели нет,
+      // проблема именно в хостинге, а не в доступе к Miro вообще.
+      var TARGETS = [
+        { name: "Miro (сама доска)", url: "https://miro.com/favicon.ico" },
+        { name: "Miro Web SDK", url: "https://miro.com/app/static/sdk/v2/miro.js" },
+        { name: "Кубомет (этот хост)", url: location.origin + "/index.html" },
+        { name: "unpkg (Cloudflare, эталон)", url: "https://unpkg.com/mirotone/dist/styles.css" },
+        { name: "jsDelivr (Cloudflare)", url: "https://cdn.jsdelivr.net/npm/preact/package.json" },
+        { name: "GitHub Pages", url: "https://pages.github.com/favicon.ico" },
+      ]
+
+      var TIMEOUT_MS = 8000
+      var rows = document.getElementById("rows")
+      var results = []
+
+      function probe(target, index) {
+        var cell = document.createElement("tr")
+        cell.innerHTML =
+          "<td>" + target.name + "<br><code>" + target.url + "</code></td><td class='wait'>проверяем…</td>"
+        rows.appendChild(cell)
+
+        var status = cell.lastElementChild
+        var started = Date.now()
+        var done = false
+
+        function finish(ok, text) {
+          if (done) return
+          done = true
+          status.className = ok ? "ok" : "fail"
+          status.textContent = text
+          results[index] = target.name + ": " + text
+          renderReport()
+        }
+
+        var timer = setTimeout(function () {
+          // Самый показательный случай: запрос не падает с ошибкой, а молча висит.
+          finish(false, "не ответил за " + TIMEOUT_MS / 1000 + " с (похоже на блокировку)")
+        }, TIMEOUT_MS)
+
+        fetch(target.url, { mode: "no-cors", cache: "no-store" })
+          .then(function () {
+            clearTimeout(timer)
+            finish(true, "доступен, " + (Date.now() - started) + " мс")
+          })
+          .catch(function (error) {
+            clearTimeout(timer)
+            finish(false, "ошибка сети: " + error.message)
+          })
+      }
+
+      function renderReport() {
+        var lines = ["Пробник кубомета", new Date().toString(), "Хост страницы: " + location.origin, ""]
+        for (var i = 0; i < TARGETS.length; i++) {
+          lines.push(results[i] || TARGETS[i].name + ": ещё проверяется")
+        }
+        lines.push("", navigator.userAgent)
+        document.getElementById("report").value = lines.join("\n")
+      }
+
+      TARGETS.forEach(probe)
+      renderReport()
+
+      document.getElementById("copy").addEventListener("click", function () {
+        var field = document.getElementById("report")
+        field.select()
+        try {
+          navigator.clipboard.writeText(field.value)
+        } catch (error) {
+          document.execCommand("copy")
+        }
+        this.textContent = "Скопировано"
+      })
+    </script>
+  </body>
+</html>
