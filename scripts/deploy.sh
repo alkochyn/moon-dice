@@ -3,7 +3,7 @@
 #
 # Настройки берутся из .env.deploy.local (в git не попадает):
 #   DEPLOY_HOST=deploy@dice.example.ru
-#   DEPLOY_PATH=/var/www/miro-dice/
+#   DEPLOY_PATH=/var/www/moon-dice/
 #   DEPLOY_PORT=22
 set -euo pipefail
 
@@ -20,7 +20,7 @@ set -a
 set +a
 
 : "${DEPLOY_HOST:?DEPLOY_HOST обязателен, например deploy@dice.example.ru}"
-: "${DEPLOY_PATH:?DEPLOY_PATH обязателен, например /var/www/miro-dice/}"
+: "${DEPLOY_PATH:?DEPLOY_PATH обязателен, например /var/www/moon-dice/}"
 DEPLOY_PORT="${DEPLOY_PORT:-22}"
 
 for tool in rsync ssh npm; do
