@@ -325,6 +325,13 @@ button {
   border-left: 3px solid var(--chip);
   border-radius: var(--radius);
   background: var(--surface);
+  /*
+   * Нижний предел ширины держит карандаш и крестик: они всплывают оверлеем
+   * у правого края, и на коротком чипе вроде «1d6» накрывали его целиком —
+   * ни формулы не видно, ни по броску не попасть. Здесь ровно столько, чтобы
+   * под оверлеем осталась кликабельная полоса с началом формулы.
+   */
+  min-width: min(118px, 100%);
   max-width: calc(50% - 3px);
   cursor: grab;
 }
@@ -403,6 +410,9 @@ button {
 }
 
 .preset__name {
+  /* Кнопка растянута на весь чип: бросок должен срабатывать по любому месту,
+     а не только по самим буквам формулы. */
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -448,16 +458,24 @@ button {
   pointer-events: auto;
 }
 
+/* Цель под курсор, а не символ: по значку в 13 пикселей игрок промахивается. */
 .preset__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border: 0;
+  border-radius: var(--radius);
   background: none;
-  padding: 0 3px;
+  padding: 0;
   font-size: 13px;
   line-height: 1;
   color: var(--muted);
 }
 
 .preset__action:hover {
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
