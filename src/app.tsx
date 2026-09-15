@@ -35,6 +35,7 @@ import { FormulaBar } from "./ui/FormulaBar"
 import { Presets, type PresetDraft, type PresetScope } from "./ui/Presets"
 import { RollLog } from "./ui/RollLog"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
+import { Help } from "./ui/Help"
 import { defaultColor, defaultIconId } from "./utils/avatar"
 
 const FORMULA_HISTORY_KEY = "dice.formulas.v1"
@@ -97,6 +98,7 @@ export const App = () => {
   const [character, setCharacter] = useState("")
   const [look, setLook] = useState<{ icon?: string; color?: string }>({})
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
@@ -444,7 +446,10 @@ export const App = () => {
         onRoll={roll}
         onSaveCurrent={() => savePresetNow(formula)}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
       />
+
+      {helpOpen && <Help onClose={() => setHelpOpen(false)} />}
 
       {settingsOpen && (
         <PlayerSettings

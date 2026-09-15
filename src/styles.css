@@ -320,6 +320,22 @@ button {
   cursor: grabbing;
 }
 
+/* В правке чип разворачивается на всю строку: в узкий не влезает поле ввода. */
+.preset--editing {
+  flex: 1 1 100%;
+  max-width: 100%;
+  gap: 4px;
+  padding: 3px 5px 3px 3px;
+  cursor: default;
+}
+
+.preset__input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 7px;
+  font-size: 13px;
+}
+
 .preset:hover {
   background: var(--surface-2);
 }
@@ -391,17 +407,6 @@ button {
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-.preset-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 6px;
-}
-
-.preset-form .input {
-  flex: 1 1 90px;
 }
 
 .colors {
@@ -792,6 +797,9 @@ button {
 .modal__card {
   width: 100%;
   max-width: 340px;
+  /* Справка и сетка значков длиннее кадра Miro — прокручиваем внутри окна. */
+  max-height: 100%;
+  overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -886,6 +894,43 @@ button {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* --- Справка --- */
+.help__title {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.help__list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.help__row {
+  display: grid;
+  grid-template-columns: minmax(0, 120px) 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.help__term {
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.help__text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .sr-only {

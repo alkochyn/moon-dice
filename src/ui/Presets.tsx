@@ -6,7 +6,7 @@ import { PRESET_COLORS, type Preset } from "../board/presets"
 export type PresetScope = "mine" | "shared"
 
 /**
- * Черновик формы: без id — новый пресет, с id — правка существующего.
+ * Черновик правки сохранённого броска.
  *
  * Отдельного поля названия нет: формула и так умеет метку после двоеточия,
  * а два поля для одного и того же путали — их легко заполнить наоборот.
@@ -48,9 +48,12 @@ export const Presets = ({
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const paletteRef = useRef<HTMLSpanElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  // Палитра закрывается кликом мимо: она перекрывает соседние элементы формы,
-  // и оставлять её открытой после выбора незачем.
+  const locked = scope === "shared" && !sharedAvailable
+
+  // Палитра закрывается кликом мимо: она перекрывает соседние чипы, и
+  // оставлять её открытой после выбора незачем.
   useEffect(() => {
     if (!paletteOpen) return undefined
 
@@ -62,10 +65,19 @@ export const Presets = ({
     return () => document.removeEventListener("mousedown", onDown)
   }, [paletteOpen])
 
-  const locked = scope === "shared" && !sharedAvailable
+  useEffect(() => {
+    if (draft) inputRef.current?.focus()
+  }, [draft?.id])
+
   const patch = (fields: Partial<PresetDraft>): void => {
     if (draft) onDraftChange({ ...draft, ...fields })
     setFormulaError(null)
+  }
+
+  const cancel = (): void => {
+    onDraftChange(null)
+    setFormulaError(null)
+    setPaletteOpen(false)
   }
 
   /**
@@ -83,6 +95,7 @@ export const Presets = ({
     }
 
     setFormulaError(null)
+    setPaletteOpen(false)
     onDraftSubmit()
   }
 
@@ -98,114 +111,129 @@ export const Presets = ({
             Доски
           </button>
         </div>
-        <span className="section__spacer" />
-        {draft && !locked && (
-          <button className="btn btn--ghost" onClick={() => onDraftChange(null)}>
-            отмена
-          </button>
-        )}
       </div>
 
       {locked ? (
-        <div className="empty">Общие пресеты доступны только на доске.</div>
+        <div className="empty">Общие броски доступны только на доске.</div>
       ) : items.length === 0 ? (
         <div className="empty">
           {scope === "mine" ? "Пока пусто. Сохраните формулу кнопкой ★." : "Общих бросков пока нет."}
         </div>
       ) : (
         <div className="presets">
-          {items.map((preset) => (
-            <span
-              key={preset.id}
-              className={`preset${draggingId === preset.id ? " preset--dragging" : ""}`}
-              style={{ "--chip": `var(--chip-${preset.color})` }}
-              draggable
-              onDragStart={(event) => {
-                setDraggingId(preset.id)
-                event.dataTransfer?.setData("text/plain", preset.id)
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault()
-                const source = draggingId ?? event.dataTransfer?.getData("text/plain")
-                if (source) onReorder(source, preset.id)
-                setDraggingId(null)
-              }}
-              onDragEnd={() => setDraggingId(null)}
-            >
-              <button className="preset__name" onClick={() => onRoll(preset)}>
-                <span className="preset__formula">{preset.formula}</span>
-                {preset.name && (
-                  <span className="preset__label" title={preset.name}>
-                    {preset.name}
-                  </span>
-                )}
-              </button>
-              {/* Карандаш и крестик всплывают по наведению: постоянно они
-                  съедали половину ширины чипа. */}
-              <span className="preset__actions">
-                <button
-                  className="preset__action"
-                  onClick={() => onEdit(preset)}
-                  title="Изменить бросок"
-                  aria-label={`Изменить ${preset.name || preset.formula}`}
-                >
-                  ✎
+          {items.map((preset) =>
+            /*
+             * Правка идёт прямо в чипе: отдельная форма внизу секции стояла
+             * вплотную к полю броска, и два поля ввода рядом путались.
+             */
+            draft?.id === preset.id ? (
+              <span
+                key={preset.id}
+                className="preset preset--editing"
+                style={{ "--chip": `var(--chip-${draft.color})` }}
+              >
+                <input
+                  ref={inputRef}
+                  className={`input preset__input${formulaError ? " input--invalid" : ""}`}
+                  value={draft.formula}
+                  placeholder="1d8+3 : Урон основной атакой"
+                  autocomplete="off"
+                  spellcheck={false}
+                  onInput={(event) => patch({ formula: (event.target as HTMLInputElement).value })}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") submit()
+                    if (event.key === "Escape") cancel()
+                  }}
+                />
+
+                <span className="color-picker" ref={paletteRef}>
+                  <button
+                    className="color color--current"
+                    style={{ "--chip": `var(--chip-${draft.color})` }}
+                    onClick={() => setPaletteOpen((open) => !open)}
+                    aria-label="Цвет метки"
+                    aria-expanded={paletteOpen}
+                  />
+                  {paletteOpen && (
+                    <span className="color-picker__menu">
+                      {PRESET_COLORS.map((item) => (
+                        <button
+                          key={item}
+                          className={`color${draft.color === item ? " color--active" : ""}`}
+                          style={{ "--chip": `var(--chip-${item})` }}
+                          onClick={() => {
+                            patch({ color: item })
+                            setPaletteOpen(false)
+                          }}
+                          aria-label={`Цвет ${item}`}
+                        />
+                      ))}
+                    </span>
+                  )}
+                </span>
+
+                <button className="preset__action" onClick={submit} title="Сохранить" aria-label="Сохранить бросок">
+                  ✓
                 </button>
-                <button
-                  className="preset__action"
-                  onClick={() => onRemove(preset.id)}
-                  title="Удалить бросок"
-                  aria-label={`Удалить ${preset.name || preset.formula}`}
-                >
+                <button className="preset__action" onClick={cancel} title="Отмена" aria-label="Отменить правку">
                   ×
                 </button>
               </span>
-            </span>
-          ))}
+            ) : (
+              <span
+                key={preset.id}
+                className={`preset${draggingId === preset.id ? " preset--dragging" : ""}`}
+                style={{ "--chip": `var(--chip-${preset.color})` }}
+                draggable
+                onDragStart={(event) => {
+                  setDraggingId(preset.id)
+                  event.dataTransfer?.setData("text/plain", preset.id)
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  const source = draggingId ?? event.dataTransfer?.getData("text/plain")
+                  if (source) onReorder(source, preset.id)
+                  setDraggingId(null)
+                }}
+                onDragEnd={() => setDraggingId(null)}
+              >
+                <button className="preset__name" onClick={() => onRoll(preset)}>
+                  <span className="preset__formula">{preset.formula}</span>
+                  {preset.name && (
+                    <span className="preset__label" title={preset.name}>
+                      {preset.name}
+                    </span>
+                  )}
+                </button>
+
+                {/* Карандаш и крестик всплывают по наведению: постоянно они
+                    съедали половину ширины чипа. */}
+                <span className="preset__actions">
+                  <button
+                    className="preset__action"
+                    onClick={() => onEdit(preset)}
+                    title="Изменить бросок"
+                    aria-label={`Изменить ${preset.name || preset.formula}`}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="preset__action"
+                    onClick={() => onRemove(preset.id)}
+                    title="Удалить бросок"
+                    aria-label={`Удалить ${preset.name || preset.formula}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              </span>
+            ),
+          )}
         </div>
       )}
 
-      {draft && !locked && (
-        <div className="preset-form">
-          <input
-            className="input preset-form__formula"
-            placeholder="1d8+3 : Урон основной атакой"
-            value={draft.formula}
-            onInput={(e) => patch({ formula: (e.target as HTMLInputElement).value })}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-          <span className="color-picker" ref={paletteRef}>
-            <button
-              className="color color--current"
-              style={{ "--chip": `var(--chip-${draft.color})` }}
-              onClick={() => setPaletteOpen((open) => !open)}
-              aria-label="Цвет метки"
-              aria-expanded={paletteOpen}
-            />
-            {paletteOpen && (
-              <span className="color-picker__menu">
-                {PRESET_COLORS.map((item) => (
-                  <button
-                    key={item}
-                    className={`color${draft.color === item ? " color--active" : ""}`}
-                    style={{ "--chip": `var(--chip-${item})` }}
-                    onClick={() => {
-                      patch({ color: item })
-                      setPaletteOpen(false)
-                    }}
-                    aria-label={`Цвет ${item}`}
-                  />
-                ))}
-              </span>
-            )}
-          </span>
-          <button className="btn btn--primary" onClick={submit}>
-            Сохранить
-          </button>
-          {formulaError && <div className="error">{formulaError}</div>}
-        </div>
-      )}
+      {formulaError && <div className="error">{formulaError}</div>}
     </section>
   )
 }

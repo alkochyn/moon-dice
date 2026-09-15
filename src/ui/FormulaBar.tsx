@@ -8,6 +8,7 @@ interface Props {
   onRoll: (formula: string) => void
   onSaveCurrent: () => void
   onOpenSettings: () => void
+  onOpenHelp: () => void
 }
 
 /** Поле ввода стоит прямо над историей: бросок и его результат рядом. */
@@ -19,6 +20,7 @@ export const FormulaBar = ({
   onRoll,
   onSaveCurrent,
   onOpenSettings,
+  onOpenHelp,
 }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null)
   // -1 — «сейчас в поле то, что набрал игрок», иначе индекс в истории.
@@ -90,6 +92,14 @@ export const FormulaBar = ({
           title="Сохранить формулу в свои броски"
         >
           ★
+        </button>
+        <button
+          className="btn btn--compact btn--icon"
+          onClick={onOpenHelp}
+          title="Как кидать"
+          aria-label="Справка"
+        >
+          ?
         </button>
         <button
           className="btn btn--compact btn--icon"
