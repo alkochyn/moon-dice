@@ -9,6 +9,10 @@ export interface RollEntry {
   ts: number
   userId: string
   userName: string
+  /** Иконка и цвет игрока едут вместе с броском: у остальных доступа к его
+   *  настройкам нет, а значок в журнале должен быть тот же самый. */
+  icon?: string
+  color?: string
   expression: string
   label?: string
   results: Array<{ total: number; detail: string }>

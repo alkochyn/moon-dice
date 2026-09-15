@@ -392,6 +392,13 @@ button {
   font-weight: 600;
   line-height: 1;
   user-select: none;
+  overflow: hidden;
+}
+
+.avatar__icon {
+  width: 72%;
+  height: 72%;
+  display: block;
 }
 
 .entry__user {
@@ -639,6 +646,61 @@ button {
   gap: 4px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.modal__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal__shuffle {
+  margin-left: auto;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/*
+ * Восемьдесят пять значков не влезают в панель целиком, поэтому сетка своя
+ * со скроллом — иначе окно настроек вылезло бы за пределы кадра Miro.
+ */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  gap: 3px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.icon-grid__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  padding: 3px;
+  color: var(--text);
+}
+
+.icon-grid__item:hover {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.icon-grid__item svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.icon-grid__item--active {
+  border-color: var(--text);
 }
 
 .modal__hint {

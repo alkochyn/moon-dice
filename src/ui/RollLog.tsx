@@ -35,7 +35,12 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
             >
               <div className="entry__body">
                 <div className="entry__line">
-                  <Avatar name={entry.userName} userId={entry.userId} />
+                  <Avatar
+                    name={entry.userName}
+                    userId={entry.userId}
+                    {...(entry.icon ? { icon: entry.icon } : {})}
+                    {...(entry.color ? { color: entry.color } : {})}
+                  />
                   <span className="entry__user">{entry.userName}</span>
                   {entry.label && <span className="entry__label">{entry.label}</span>}
                 </div>

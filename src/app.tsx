@@ -33,13 +33,15 @@ import { RollBar } from "./ui/RollBar"
 import { Presets, type PresetDraft, type PresetScope } from "./ui/Presets"
 import { RollLog } from "./ui/RollLog"
 import { Diagnostics } from "./ui/Diagnostics"
-import { PlayerSettings } from "./ui/PlayerSettings"
+import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
+import { defaultColor, defaultIconId } from "./utils/avatar"
 
 const FORMULA_HISTORY_KEY = "dice.formulas.v1"
 const LOCAL_USER_KEY = "dice.localUserId.v1"
 const POST_TO_BOARD_KEY = "dice.postToBoard.v1"
 const DICE_SET_KEY = "dice.set.v1"
 const CHARACTER_KEY = "dice.character.v1"
+const LOOK_KEY = "dice.look.v1"
 const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
 const POLL_INTERVAL_MS = 4000
@@ -91,6 +93,7 @@ export const App = () => {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [postToBoard, setPostToBoard] = useState(false)
   const [character, setCharacter] = useState("")
+  const [look, setLook] = useState<{ icon?: string; color?: string }>({})
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const statusRef = useRef<BoardStatus>("loading")
@@ -98,11 +101,19 @@ export const App = () => {
   const postToBoardRef = useRef(false)
   const anonId = useRef<string>("")
   const characterRef = useRef("")
+  const lookRef = useRef<{ icon: string; color: string }>({ icon: "", color: "" })
+
+  const playerId = user?.id ?? anonId.current
+  // Пока игрок не выбрал внешность, она выводится из его id: у каждого сразу
+  // свой значок, одинаковый у всех, кто смотрит журнал.
+  const playerIcon = look.icon ?? defaultIconId(playerId)
+  const playerColor = look.color ?? defaultColor(playerId)
 
   statusRef.current = status
   personalRef.current = personal
   postToBoardRef.current = postToBoard
   characterRef.current = character
+  lookRef.current = { icon: playerIcon, color: playerColor }
 
   // Локальное состояние поднимаем сразу: панель обязана быть рабочей ещё до
   // того, как выяснится, доехал ли SDK.
@@ -113,6 +124,7 @@ export const App = () => {
     setPostToBoard(readJson<boolean>(POST_TO_BOARD_KEY, false))
     setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
     setCharacter(readJson<string>(CHARACTER_KEY, ""))
+    setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
 
     const local = readLocalPresets()
     setPersonal({ updatedAt: local.updatedAt, items: local.items })
@@ -234,6 +246,8 @@ export const App = () => {
         ts: Date.now(),
         userId: user?.id ?? anonId.current,
         userName: characterRef.current || user?.name || "Вы",
+        icon: lookRef.current.icon,
+        color: lookRef.current.color,
         expression: result.expression,
         ...(label ? { label } : {}),
         results: result.rolls.map((item) => ({ total: item.total, detail: item.detail })),
@@ -310,9 +324,13 @@ export const App = () => {
     [savePersonal, saveShared, scope, shared],
   )
 
-  const saveCharacter = useCallback((name: string) => {
-    setCharacter(name)
-    writeJson(CHARACTER_KEY, name)
+  const savePlayerLook = useCallback((next: PlayerLook) => {
+    setCharacter(next.character)
+    writeJson(CHARACTER_KEY, next.character)
+
+    const appearance = { icon: next.icon, color: next.color }
+    setLook(appearance)
+    writeJson(LOOK_KEY, appearance)
   }, [])
 
   const changeDiceSet = useCallback((id: string) => {
@@ -338,8 +356,10 @@ export const App = () => {
       {settingsOpen && (
         <PlayerSettings
           character={character}
+          icon={playerIcon}
+          color={playerColor}
           {...(user ? { accountName: user.name } : {})}
-          onSave={saveCharacter}
+          onSave={savePlayerLook}
           onClose={() => setSettingsOpen(false)}
         />
       )}
