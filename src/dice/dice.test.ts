@@ -172,18 +172,30 @@ describe("честность генератора", () => {
   it("d20 держится в границах и распределён ровно", () => {
     const counts = new Array<number>(21).fill(0)
     const n = 100_000
+    const sides = 20
 
     for (let i = 0; i < n; i++) {
-      const value = cryptoRng(20)
+      const value = cryptoRng(sides)
       expect(value).toBeGreaterThanOrEqual(1)
-      expect(value).toBeLessThanOrEqual(20)
+      expect(value).toBeLessThanOrEqual(sides)
       counts[value] = (counts[value] as number) + 1
     }
 
-    const expected = n / 20
-    for (let face = 1; face <= 20; face++) {
-      // ±4% от ожидания: при 100k бросках честный куб туда укладывается с огромным запасом.
-      expect(Math.abs((counts[face] as number) - expected)).toBeLessThan(expected * 0.04)
+    /*
+     * Порог считаем от стандартного отклонения, а не «на глаз».
+     *
+     * Число выпадений грани — биномиальная величина, сигма = sqrt(n·p·(1-p)) ≈ 69.
+     * Первый вариант этого теста брал ±4% от ожидания, то есть 2.9 сигмы, и
+     * честный генератор заваливал его примерно раз в четырнадцать прогонов —
+     * что и случилось на CI. Пять сигм дают ложное падение раз в ~87 тысяч
+     * прогонов и при этом ловят любой реальный перекос: сдвиг диапазона или
+     * выпадающая грань уходят за порог на порядки.
+     */
+    const expected = n / sides
+    const sigma = Math.sqrt(n * (1 / sides) * (1 - 1 / sides))
+
+    for (let face = 1; face <= sides; face++) {
+      expect(Math.abs((counts[face] as number) - expected)).toBeLessThan(5 * sigma)
     }
   })
 

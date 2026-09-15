@@ -29,6 +29,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Красные тесты не должны доезжать до игроков: зеркало и проверки —
+      # разные воркфлоу, и без этой строки сборка уходила независимо от них.
+      - run: npm test
       - run: npm run build
       # enablement включает Pages сам, чтобы не ходить в настройки репозитория руками.
       - uses: actions/configure-pages@v5
