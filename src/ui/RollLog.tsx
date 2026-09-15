@@ -73,7 +73,9 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                   </span>
 
                   <span className="entry__arrow">→</span>
-                  <span className="entry__detail">{detail}</span>
+                  <span className="entry__detail" title={detail}>
+                    {detail}
+                  </span>
                 </div>
               </div>
 

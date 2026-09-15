@@ -507,6 +507,7 @@ button {
 
 .entry__line--roll {
   flex-wrap: nowrap;
+  align-items: flex-start;
   gap: 5px;
 }
 
@@ -556,11 +557,14 @@ button {
 }
 
 /* Формула — она же кнопка переброса; иконки действий ложатся прямо на неё. */
+/* Формула не уступает место раскладу: по ней бросок и узнают, а обрезанное
+   «2…» не говорит ни о чём. */
 .entry__roll {
   position: relative;
   display: inline-flex;
   align-items: center;
-  flex: 0 1 auto;
+  flex: none;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -615,7 +619,7 @@ button {
   flex: none;
   border: 0;
   background: none;
-  padding: 0 2px;
+  padding: 1px 2px 0;
   font-size: 14px;
   line-height: 1;
   color: var(--muted);
@@ -645,17 +649,26 @@ button {
   flex: none;
   color: #9aa1ad;
   font-size: 12px;
+  line-height: 1.5;
 }
 
+/*
+ * Расклад может занять вторую строку, но не больше: горсть кубов вроде 20d20
+ * иначе растянула бы карточку на пол-журнала. Что не влезло и во вторую —
+ * обрезается, полный расклад показывается подсказкой.
+ */
 .entry__detail {
   flex: 1 1 auto;
   min-width: 0;
   color: var(--muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .entry__totals {
