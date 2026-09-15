@@ -347,9 +347,32 @@ button {
   gap: 6px;
   padding: 8px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  /* Рамка акцентом, как подсветка правящегося чипа: окошко должно читаться
+     как продолжение чипа, а не сливаться с полем броска под ним. */
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
-  box-shadow: 0 8px 20px rgb(0 0 0 / 16%);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 22%);
+}
+
+/* Хвостик показывает, к какому чипу относится окошко. */
+.preset-edit::before,
+.preset-edit::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+
+.preset-edit::before {
+  top: -13px;
+  border-bottom-color: var(--accent);
+}
+
+.preset-edit::after {
+  top: -12px;
+  border-bottom-color: var(--bg);
 }
 
 .preset-edit__input {

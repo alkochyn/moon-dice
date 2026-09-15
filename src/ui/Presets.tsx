@@ -40,6 +40,14 @@ interface Props {
 const POPOVER_MIN_WIDTH = 240
 const SCREEN_MARGIN = 8
 
+/** Ставит окошко под чипом, не давая ему вылезти за край панели. */
+const placeBelow = (rect: DOMRect): Anchor => {
+  const width = Math.max(rect.width, POPOVER_MIN_WIDTH)
+  const left = Math.min(rect.left, window.innerWidth - width - SCREEN_MARGIN)
+
+  return { top: rect.bottom + 4, left: Math.max(SCREEN_MARGIN, left), width }
+}
+
 export const Presets = ({
   scope,
   onScopeChange,
@@ -58,6 +66,7 @@ export const Presets = ({
   const [anchor, setAnchor] = useState<Anchor | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const chipRef = useRef<HTMLElement | null>(null)
 
   const locked = scope === "shared" && !sharedAvailable
   const editing = Boolean(draft && anchor)
@@ -73,9 +82,10 @@ export const Presets = ({
   }, [draft?.id])
 
   /*
-   * Окошко привязано к месту чипа на экране, поэтому закрываем его на любой
-   * прокрутке и смене размера: пересчитывать положение на каждый пиксель
-   * дороже, чем просто не показывать оторвавшуюся от чипа панельку.
+   * Окошко привязано к месту чипа на экране, поэтому при прокрутке и смене
+   * размера переставляем его следом. Раньше оно на любой скролл закрывалось,
+   * но слушатель ловил прокрутку чего угодно, включая журнал, и правка
+   * захлопывалась от постороннего движения.
    */
   useEffect(() => {
     if (!editing) return undefined
@@ -86,30 +96,31 @@ export const Presets = ({
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === "Escape") close()
     }
+    const reposition = (): void => {
+      const rect = chipRef.current?.getBoundingClientRect()
+      if (rect) setAnchor(placeBelow(rect))
+    }
 
     document.addEventListener("mousedown", onOutside)
     document.addEventListener("keydown", onKey)
-    window.addEventListener("resize", close)
-    document.addEventListener("scroll", close, true)
+    window.addEventListener("resize", reposition)
+    document.addEventListener("scroll", reposition, true)
 
     return () => {
       document.removeEventListener("mousedown", onOutside)
       document.removeEventListener("keydown", onKey)
-      window.removeEventListener("resize", close)
-      document.removeEventListener("scroll", close, true)
+      window.removeEventListener("resize", reposition)
+      document.removeEventListener("scroll", reposition, true)
     }
   }, [editing])
 
   const startEdit = (preset: Preset, event: MouseEvent): void => {
-    const chip = (event.currentTarget as HTMLElement).closest(".preset")
+    const chip = (event.currentTarget as HTMLElement).closest(".preset") as HTMLElement | null
     if (!chip) return
 
-    const rect = chip.getBoundingClientRect()
-    const width = Math.max(rect.width, POPOVER_MIN_WIDTH)
-    const left = Math.min(rect.left, window.innerWidth - width - SCREEN_MARGIN)
-
+    chipRef.current = chip
     setFormulaError(null)
-    setAnchor({ top: rect.bottom + 4, left: Math.max(SCREEN_MARGIN, left), width })
+    setAnchor(placeBelow(chip.getBoundingClientRect()))
     onEdit(preset)
   }
 
