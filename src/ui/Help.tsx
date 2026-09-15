@@ -94,7 +94,7 @@ export const Help = ({ onClose }: Props) => {
           закрывал не справку, а всё приложение.
         */}
         <div className="modal__footer">
-          <button className="btn btn--primary modal__close" onClick={onClose}>
+          <button className="btn" onClick={onClose}>
             Закрыть
           </button>
         </div>

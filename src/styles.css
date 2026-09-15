@@ -157,7 +157,13 @@ button {
   color: var(--accent-text);
 }
 
+/*
+ * Фон задаём явно: у .btn:hover специфичность выше, чем у .btn--primary, и без
+ * этой строки при наведении синяя кнопка получала светло-серый фон, оставаясь
+ * с белым текстом. Содержимое просто исчезало — и надпись, и иконка кубика.
+ */
 .btn--primary:hover {
+  background: var(--accent);
   filter: brightness(1.08);
 }
 
@@ -960,14 +966,12 @@ button {
 .modal__footer {
   position: sticky;
   bottom: -12px;
+  display: flex;
+  justify-content: flex-end;
   margin: 4px -12px -12px;
   padding: 8px 12px 12px;
   background: var(--bg);
   border-top: 1px solid var(--border);
-}
-
-.modal__close {
-  width: 100%;
 }
 
 /* Тот же приём в настройках: их кнопки тоже не должны уезжать при прокрутке,
