@@ -189,15 +189,17 @@ button {
 .dice-grid {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 4px;
 }
 
 .dice-grid .btn {
-  padding: 5px 11px;
+  padding: 4px 9px;
   border-radius: 999px;
   border-color: transparent;
   background: var(--accent-soft);
   color: var(--accent);
+  font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
