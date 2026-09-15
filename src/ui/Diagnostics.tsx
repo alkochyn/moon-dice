@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks"
-import { getMiro, isInsideMiro, isPanelMode, type BoardStatus } from "../board/sdk"
+import { getMiro, isInsideMiro, isPanelMode, probeUser, type BoardStatus } from "../board/sdk"
 import { probeBoardStorage } from "../board/storage"
 
 /**
@@ -51,6 +51,7 @@ const localStorageState = (): string => {
 export const Diagnostics = ({ status }: Props) => {
   const [ping, setPing] = useState("проверяем…")
   const [boardStorage, setBoardStorage] = useState("проверяем…")
+  const [player, setPlayer] = useState("проверяем…")
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export const Diagnostics = ({ status }: Props) => {
 
   useEffect(() => {
     void probeBoardStorage().then(setBoardStorage)
+    void probeUser().then(setPlayer)
   }, [status])
 
   const rows: Rows = [
@@ -68,6 +70,7 @@ export const Diagnostics = ({ status }: Props) => {
     ["Контекст", isInsideMiro() ? (isPanelMode() ? "панель в Miro" : "фоновый кадр в Miro") : "обычная вкладка"],
     ["Хостинг", location.origin],
     ["Отклик", ping],
+    ["Игрок", player],
     ["Хранилище доски", boardStorage],
     ["Хранилище браузера", localStorageState()],
     ["Куки", navigator.cookieEnabled ? "разрешены" : "заблокированы для стороннего кадра"],

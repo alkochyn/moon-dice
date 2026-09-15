@@ -96,6 +96,24 @@ export interface BoardUser {
   name: string
 }
 
+/**
+ * Диагностика: почему не определился игрок. getUserInfo требует скоуп
+ * identity:read — без него вызов падает, броски подписываются «Вы», и по
+ * молчаливому null это не выяснить.
+ */
+export const probeUser = async (): Promise<string> => {
+  const sdk = getMiro()
+  if (!sdk) return "неизвестен: нет SDK"
+
+  try {
+    const info = await sdk.board.getUserInfo()
+    if (!info?.name) return `имя не пришло, id ${info?.id ?? "нет"}`
+    return `${info.name} (id ${info.id})`
+  } catch (error) {
+    return `ошибка: ${(error as Error).name} ${(error as Error).message} — вероятно, не выдан скоуп identity:read`
+  }
+}
+
 export const getCurrentUser = async (): Promise<BoardUser | null> => {
   const sdk = getMiro()
   if (!sdk) return null

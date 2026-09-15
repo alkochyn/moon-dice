@@ -18,20 +18,11 @@
   --chip-violet: #7c3aed;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17181c;
-    --surface: #202228;
-    --surface-2: #2a2d35;
-    --text: #ecedf0;
-    --muted: #9aa0ab;
-    --border: #343842;
-    --accent: #7b8cff;
-    --accent-text: #10121a;
-    --danger: #ff7a7a;
-    --ok: #4ade80;
-  }
-}
+/*
+ * Тема всегда светлая, без подстройки под prefers-color-scheme: панель висит
+ * внутри доски Miro, а та светлая независимо от системной темы игрока —
+ * тёмная колонка сбоку смотрелась чужеродно.
+ */
 
 * {
   box-sizing: border-box;
