@@ -25,7 +25,6 @@ interface Props {
   draft: PresetDraft | null
   onDraftChange: (draft: PresetDraft | null) => void
   onDraftSubmit: () => void
-  onOpenDraft: () => void
   onEdit: (preset: Preset) => void
   onRoll: (preset: Preset) => void
   onRemove: (id: string) => void
@@ -40,7 +39,6 @@ export const Presets = ({
   draft,
   onDraftChange,
   onDraftSubmit,
-  onOpenDraft,
   onEdit,
   onRoll,
   onRemove,
@@ -101,9 +99,9 @@ export const Presets = ({
           </button>
         </div>
         <span className="section__spacer" />
-        {!locked && (
-          <button className="btn btn--ghost" onClick={() => (draft ? onDraftChange(null) : onOpenDraft())}>
-            {draft ? "отмена" : "+ добавить"}
+        {draft && !locked && (
+          <button className="btn btn--ghost" onClick={() => onDraftChange(null)}>
+            отмена
           </button>
         )}
       </div>
@@ -203,7 +201,7 @@ export const Presets = ({
             )}
           </span>
           <button className="btn btn--primary" onClick={submit}>
-            {draft.id ? "Сохранить" : "Добавить"}
+            Сохранить
           </button>
           {formulaError && <div className="error">{formulaError}</div>}
         </div>

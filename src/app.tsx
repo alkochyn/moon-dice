@@ -290,15 +290,39 @@ export const App = () => {
   const toSource = (expression: string, label?: string): string =>
     label ? `${expression} : ${label}` : expression
 
-  const openDraft = useCallback(() => {
-    setPresetDraft({ formula: formula.trim(), color: "slate" })
-  }, [formula])
+  /**
+   * Звёздочка сохраняет сразу, без формы: цвет и название можно поправить
+   * потом карандашом. Повторный клик по той же формуле ничего не добавляет —
+   * иначе список забивался бы копиями от случайных нажатий.
+   */
+  const savePresetNow = useCallback(
+    (source: string) => {
+      const trimmed = source.trim()
+      if (!trimmed) return
+
+      let parsed
+      try {
+        parsed = parseFormula(trimmed)
+      } catch (failure) {
+        setError(failure instanceof DiceError ? failure.message : "Не удалось разобрать формулу")
+        return
+      }
+
+      setScope("mine")
+      const name = parsed.label ?? ""
+      const items = personalRef.current.items
+      if (items.some((item) => item.formula === parsed.expression && item.name === name)) return
+
+      savePersonal([...items, makePreset(name, parsed.expression, "slate")])
+    },
+    [savePersonal],
+  )
 
   /** Звёздочка на карточке броска: сохраняем его формулу вместе с названием. */
-  const savePresetFromEntry = useCallback((entry: RollEntry) => {
-    setScope("mine")
-    setPresetDraft({ formula: toSource(entry.expression, entry.label), color: "slate" })
-  }, [])
+  const savePresetFromEntry = useCallback(
+    (entry: RollEntry) => savePresetNow(toSource(entry.expression, entry.label)),
+    [savePresetNow],
+  )
 
   const editPreset = useCallback((preset: Preset) => {
     setPresetDraft({ id: preset.id, formula: toSource(preset.formula, preset.name), color: preset.color })
@@ -398,7 +422,6 @@ export const App = () => {
         draft={presetDraft}
         onDraftChange={setPresetDraft}
         onDraftSubmit={submitDraft}
-        onOpenDraft={openDraft}
         onEdit={editPreset}
         onRoll={(preset) => roll(preset.formula, preset.name)}
         onRemove={removePreset}
@@ -411,10 +434,7 @@ export const App = () => {
         formulaHistory={formulaHistory}
         onFormulaChange={setFormula}
         onRoll={roll}
-        onSaveCurrent={() => {
-          setScope("mine")
-          openDraft()
-        }}
+        onSaveCurrent={() => savePresetNow(formula)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
