@@ -42,12 +42,19 @@ button {
   cursor: pointer;
 }
 
+/*
+ * Панель занимает ровно высоту кадра, а прокручивается внутри неё только
+ * журнал: кубы и сохранённые броски должны оставаться под рукой, сколько бы
+ * записей ни накопилось за сессию.
+ */
 .app {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 10px;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* --- Статус --- */
@@ -216,6 +223,10 @@ button {
   color: var(--muted);
 }
 
+.tabs--sets {
+  align-self: flex-start;
+}
+
 .tab--active {
   background: var(--bg);
   color: var(--text);
@@ -227,6 +238,10 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  /* Набор DCC занимает четыре ряда кнопок, и без потолка на список сохранённых
+     журналу не остаётся места. */
+  max-height: 26vh;
+  overflow-y: auto;
 }
 
 .preset {
@@ -295,10 +310,21 @@ button {
 }
 
 /* --- Журнал --- */
+.section--log {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  /* Без min-height: 0 флекс-элемент не даёт себя сжать, и прокрутка не включается. */
+  min-height: 0;
+}
+
 .log {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   overflow-anchor: none;
 }
 
@@ -329,8 +355,12 @@ button {
   white-space: nowrap;
 }
 
+/* Название сохранённого броска — подпись, ради которой партия и понимает,
+   что именно кинули. */
 .entry__label {
-  font-style: italic;
+  font-weight: 500;
+  margin-top: 1px;
+  word-break: break-word;
 }
 
 .entry__time {

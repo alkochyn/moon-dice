@@ -61,9 +61,5 @@ export const publishEntry = async (entry: RollEntry): Promise<boolean> => {
   return next !== null
 }
 
-export const clearBoardLog = async (): Promise<void> => {
-  await updateKey<RollEntry[]>(LOG_KEY, () => [])
-}
-
 export const subscribeBoardLog = (handler: (entries: RollEntry[]) => void): (() => void) =>
   subscribeKey<RollEntry[]>(LOG_KEY, (value) => handler(Array.isArray(value) ? value : []))

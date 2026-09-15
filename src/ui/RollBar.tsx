@@ -1,17 +1,27 @@
 import { useRef, useState } from "preact/hooks"
-
-const QUICK_DICE = ["d4", "d6", "d8", "d10", "d12", "d20", "d100", "2d6"]
+import { DICE_SETS, findDiceSet } from "../data/diceSets"
 
 interface Props {
   formula: string
   error: string | null
   formulaHistory: string[]
+  diceSet: string
+  onDiceSetChange: (id: string) => void
   onFormulaChange: (value: string) => void
   onRoll: (formula: string) => void
   onSaveCurrent: () => void
 }
 
-export const RollBar = ({ formula, error, formulaHistory, onFormulaChange, onRoll, onSaveCurrent }: Props) => {
+export const RollBar = ({
+  formula,
+  error,
+  formulaHistory,
+  diceSet,
+  onDiceSetChange,
+  onFormulaChange,
+  onRoll,
+  onSaveCurrent,
+}: Props) => {
   const inputRef = useRef<HTMLInputElement>(null)
   // -1 — «сейчас в поле то, что набрал игрок», иначе индекс в истории.
   const [cursor, setCursor] = useState(-1)
@@ -53,6 +63,8 @@ export const RollBar = ({ formula, error, formulaHistory, onFormulaChange, onRol
     }
   }
 
+  const dice = findDiceSet(diceSet).dice
+
   return (
     <div className="rollbar">
       <div className="rollbar__row">
@@ -83,10 +95,25 @@ export const RollBar = ({ formula, error, formulaHistory, onFormulaChange, onRol
 
       {error && <div className="error">{error}</div>}
 
+      {DICE_SETS.length > 1 && (
+        <div className="tabs tabs--sets">
+          {DICE_SETS.map((set) => (
+            <button
+              key={set.id}
+              className={`tab${set.id === diceSet ? " tab--active" : ""}`}
+              onClick={() => onDiceSetChange(set.id)}
+              title={`Набор кубов: ${set.title}`}
+            >
+              {set.title}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="dice-grid">
-        {QUICK_DICE.map((dice) => (
-          <button key={dice} className="btn" onClick={() => onRoll(dice)} title={`Бросить ${dice}`}>
-            {dice}
+        {dice.map((item) => (
+          <button key={item} className="btn" onClick={() => onRoll(item)} title={`Бросить ${item}`}>
+            {item}
           </button>
         ))}
       </div>
