@@ -1,5 +1,7 @@
 import { useRef, useState } from "preact/hooks"
 
+import { DieIcon, StarIcon } from "./icons"
+
 interface Props {
   formula: string
   error: string | null
@@ -83,15 +85,21 @@ export const FormulaBar = ({
           onKeyDown={handleKeyDown}
           title="Enter — бросок, ↑/↓ — прошлые формулы"
         />
-        <button className="btn btn--compact btn--primary" onClick={() => onRoll(formula)}>
-          Бросок
+        <button
+          className="btn btn--compact btn--primary btn--icon"
+          onClick={() => onRoll(formula)}
+          title="Бросок"
+          aria-label="Бросок"
+        >
+          <DieIcon />
         </button>
         <button
           className="btn btn--compact btn--icon"
           onClick={onSaveCurrent}
-          title="Сохранить формулу в свои броски"
+          title="Сохранить бросок"
+          aria-label="Сохранить бросок"
         >
-          ★
+          <StarIcon />
         </button>
         <button
           className="btn btn--compact btn--icon"

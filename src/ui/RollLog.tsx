@@ -1,5 +1,6 @@
 import type { RollEntry } from "../board/log"
 import { Avatar } from "./Avatar"
+import { RepeatIcon, StarIcon } from "./icons"
 
 interface Props {
   entries: RollEntry[]
@@ -53,7 +54,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                     onClick={() => onRepeat(entry)}
                     aria-label={`Перебросить ${entry.expression}`}
                   >
-                    ↻
+                    <RepeatIcon />
                   </button>
 
                   <span className="entry__roll">
@@ -67,7 +68,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                         onClick={() => onSave(entry)}
                         aria-label={`Сохранить ${entry.expression}`}
                       >
-                        ★
+                        <StarIcon />
                       </button>
                     </span>
                   </span>
