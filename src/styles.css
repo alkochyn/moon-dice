@@ -328,20 +328,45 @@ button {
   cursor: grabbing;
 }
 
-/* В правке чип разворачивается на всю строку: в узкий не влезает поле ввода. */
+/* В правке чип не меняет размера — только подсвечивается, чтобы было видно,
+   какой именно бросок сейчас правится. */
 .preset--editing {
-  flex: 1 1 100%;
-  max-width: 100%;
-  gap: 4px;
-  padding: 3px 5px 3px 3px;
-  cursor: default;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
-.preset__input {
-  flex: 1;
-  min-width: 0;
-  padding: 3px 7px;
+/*
+ * Окошко правки привязано к месту чипа на экране (position: fixed), потому
+ * что список сохранённых прокручивается и обрезал бы вложенную панельку.
+ */
+.preset-edit {
+  position: fixed;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 16%);
+}
+
+.preset-edit__input {
+  width: 100%;
+  padding: 5px 8px;
   font-size: 13px;
+}
+
+.preset-edit__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-edit .preset__action {
+  opacity: 1;
+  font-size: 15px;
 }
 
 .preset:hover {
