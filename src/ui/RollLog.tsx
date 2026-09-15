@@ -1,4 +1,5 @@
 import type { RollEntry } from "../board/log"
+import { Avatar } from "./Avatar"
 
 interface Props {
   entries: RollEntry[]
@@ -21,6 +22,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat }: Props) => (
         {entries.map((entry) => (
           <article key={entry.id} className={`entry${entry.userId === currentUserId ? " entry--mine" : ""}`}>
             <header className="entry__head">
+              <Avatar name={entry.userName} userId={entry.userId} />
               <span className="entry__user">{entry.userName}</span>
               <span className="entry__time">{time(entry.ts)}</span>
             </header>
