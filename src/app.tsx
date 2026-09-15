@@ -29,10 +29,10 @@ import {
 } from "./board/presets"
 import { postRollToBoard } from "./board/post"
 import { StatusBar } from "./ui/StatusBar"
-import { RollBar } from "./ui/RollBar"
+import { DiceBar } from "./ui/DiceBar"
+import { FormulaBar } from "./ui/FormulaBar"
 import { Presets, type PresetDraft, type PresetScope } from "./ui/Presets"
 import { RollLog } from "./ui/RollLog"
-import { Diagnostics } from "./ui/Diagnostics"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { defaultColor, defaultIconId } from "./utils/avatar"
 
@@ -40,6 +40,7 @@ const FORMULA_HISTORY_KEY = "dice.formulas.v1"
 const LOCAL_USER_KEY = "dice.localUserId.v1"
 const POST_TO_BOARD_KEY = "dice.postToBoard.v1"
 const DICE_SET_KEY = "dice.set.v1"
+const DICE_COLLAPSED_KEY = "dice.collapsed.v1"
 const CHARACTER_KEY = "dice.character.v1"
 const LOOK_KEY = "dice.look.v1"
 const MAX_FORMULA_HISTORY = 50
@@ -90,7 +91,7 @@ export const App = () => {
   const [scope, setScope] = useState<PresetScope>("mine")
   const [presetDraft, setPresetDraft] = useState<PresetDraft | null>(null)
   const [diceSet, setDiceSet] = useState<string>(DEFAULT_DICE_SET)
-  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const [diceCollapsed, setDiceCollapsed] = useState(false)
   const [postToBoard, setPostToBoard] = useState(false)
   const [character, setCharacter] = useState("")
   const [look, setLook] = useState<{ icon?: string; color?: string }>({})
@@ -123,6 +124,7 @@ export const App = () => {
     setFormulaHistory(readJson<string[]>(FORMULA_HISTORY_KEY, []))
     setPostToBoard(readJson<boolean>(POST_TO_BOARD_KEY, false))
     setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
+    setDiceCollapsed(readJson<boolean>(DICE_COLLAPSED_KEY, false))
     setCharacter(readJson<string>(CHARACTER_KEY, ""))
     setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
 
@@ -353,6 +355,13 @@ export const App = () => {
     writeJson(DICE_SET_KEY, id)
   }, [])
 
+  const toggleDiceCollapsed = useCallback(() => {
+    setDiceCollapsed((collapsed) => {
+      writeJson(DICE_COLLAPSED_KEY, !collapsed)
+      return !collapsed
+    })
+  }, [])
+
   const togglePostToBoard = useCallback((next: boolean) => {
     setPostToBoard(next)
     writeJson(POST_TO_BOARD_KEY, next)
@@ -360,41 +369,16 @@ export const App = () => {
 
   return (
     <div className="app">
-      <StatusBar
-        status={status}
-        {...(character || user ? { displayName: character || (user?.name as string) } : {})}
-        diagnosticsOpen={diagnosticsOpen}
-        onToggleDiagnostics={() => setDiagnosticsOpen((open) => !open)}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
-
-      {settingsOpen && (
-        <PlayerSettings
-          character={character}
-          icon={playerIcon}
-          color={playerColor}
-          {...(user ? { accountName: user.name } : {})}
-          onSave={savePlayerLook}
-          onClose={() => setSettingsOpen(false)}
-        />
-      )}
-
-      {diagnosticsOpen && <Diagnostics status={status} />}
+      <StatusBar status={status} />
 
       {shareError && <div className="warning">{shareError}</div>}
 
-      <RollBar
-        formula={formula}
-        error={error}
-        formulaHistory={formulaHistory}
+      <DiceBar
         diceSet={diceSet}
+        collapsed={diceCollapsed}
         onDiceSetChange={changeDiceSet}
-        onFormulaChange={setFormula}
+        onToggleCollapsed={toggleDiceCollapsed}
         onRoll={roll}
-        onSaveCurrent={() => {
-          setScope("mine")
-          openDraft()
-        }}
       />
 
       <Presets
@@ -411,9 +395,34 @@ export const App = () => {
         onRemove={removePreset}
       />
 
+      <FormulaBar
+        formula={formula}
+        error={error}
+        formulaHistory={formulaHistory}
+        onFormulaChange={setFormula}
+        onRoll={roll}
+        onSaveCurrent={() => {
+          setScope("mine")
+          openDraft()
+        }}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      {settingsOpen && (
+        <PlayerSettings
+          character={character}
+          icon={playerIcon}
+          color={playerColor}
+          status={status}
+          {...(user ? { accountName: user.name } : {})}
+          onSave={savePlayerLook}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
       <RollLog
         entries={entries}
-        currentUserId={user?.id ?? anonId.current}
+        currentUserId={playerId}
         onRepeat={(value) => {
           setFormula(value)
           roll(value)

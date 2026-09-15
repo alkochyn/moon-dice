@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks"
 
+import type { BoardStatus } from "../board/sdk"
+import { Diagnostics } from "./Diagnostics"
+
 import { ICONS, ICON_AUTHORS, ICON_IDS, ICON_VIEWBOX } from "../data/icons"
 import { AVATAR_COLORS, randomColor, randomIconId } from "../utils/avatar"
 import { Avatar } from "./Avatar"
@@ -14,14 +17,16 @@ export interface PlayerLook {
 
 interface Props extends PlayerLook {
   accountName?: string
+  status: BoardStatus
   onSave: (look: PlayerLook) => void
   onClose: () => void
 }
 
-export const PlayerSettings = ({ character, icon, color, accountName, onSave, onClose }: Props) => {
+export const PlayerSettings = ({ character, icon, color, accountName, status, onSave, onClose }: Props) => {
   const [name, setName] = useState(character)
   const [pickedIcon, setPickedIcon] = useState(icon)
   const [pickedColor, setPickedColor] = useState(color)
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -120,6 +125,13 @@ export const PlayerSettings = ({ character, icon, color, accountName, onSave, on
           Имя, иконка и цвет видны всей партии в истории бросков. Оставьте имя пустым, чтобы вернуться к имени аккаунта.
           Иконки — game-icons.net ({ICON_AUTHORS.join(", ")}), лицензия CC BY 3.0.
         </p>
+
+        <div className="modal__field">
+          <button className="btn btn--ghost modal__diag-toggle" onClick={() => setDiagnosticsOpen((open) => !open)}>
+            {diagnosticsOpen ? "скрыть диагностику" : "диагностика"}
+          </button>
+          {diagnosticsOpen && <Diagnostics status={status} />}
+        </div>
 
         <div className="modal__actions">
           <button className="btn" onClick={onClose}>

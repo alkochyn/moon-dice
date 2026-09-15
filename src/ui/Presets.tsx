@@ -101,29 +101,33 @@ export const Presets = ({
           {items.map((preset) => (
             <span key={preset.id} className="preset" style={{ "--chip": `var(--chip-${preset.color})` }}>
               <button
-                className="preset__name btn btn--ghost"
+                className="preset__name"
                 onClick={() => onRoll(preset)}
                 title={`Бросить ${preset.formula}`}
               >
                 {preset.name && `${preset.name} `}
                 <span className="preset__formula">{preset.formula}</span>
               </button>
-              <button
-                className="btn btn--ghost btn--icon"
-                onClick={() => onEdit(preset)}
-                title="Переименовать или изменить"
-                aria-label={`Изменить ${preset.name}`}
-              >
-                ✎
-              </button>
-              <button
-                className="btn btn--ghost btn--icon"
-                onClick={() => onRemove(preset.id)}
-                title="Удалить бросок"
-                aria-label={`Удалить ${preset.name}`}
-              >
-                ×
-              </button>
+              {/* Карандаш и крестик всплывают по наведению: постоянно они
+                  съедали половину ширины чипа. */}
+              <span className="preset__actions">
+                <button
+                  className="preset__action"
+                  onClick={() => onEdit(preset)}
+                  title="Изменить бросок"
+                  aria-label={`Изменить ${preset.name || preset.formula}`}
+                >
+                  ✎
+                </button>
+                <button
+                  className="preset__action"
+                  onClick={() => onRemove(preset.id)}
+                  title="Удалить бросок"
+                  aria-label={`Удалить ${preset.name || preset.formula}`}
+                >
+                  ×
+                </button>
+              </span>
             </span>
           ))}
         </div>

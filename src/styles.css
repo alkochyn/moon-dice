@@ -165,6 +165,16 @@ button {
   line-height: 1;
 }
 
+/* Компактные варианты для нижней строки ввода: она стоит вплотную к журналу,
+   и каждый лишний пиксель там отнимается у истории. */
+.input--compact {
+  padding: 5px 9px;
+}
+
+.btn--compact {
+  padding: 5px 10px;
+}
+
 .error {
   color: var(--danger);
   font-size: 12px;
@@ -251,8 +261,16 @@ button {
   color: var(--muted);
 }
 
-.tabs--sets {
-  align-self: flex-start;
+.dicebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dicebar__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .tab--active {
@@ -273,14 +291,13 @@ button {
 }
 
 .preset {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   border: 1px solid var(--border);
   border-left: 3px solid var(--chip);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 5px 8px;
   max-width: 100%;
 }
 
@@ -289,15 +306,55 @@ button {
 }
 
 .preset__name {
+  border: 0;
+  background: none;
+  padding: 3px 8px;
+  font-size: 13px;
   font-weight: 500;
+  color: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+}
+
+/* Действия всплывают у правого края чипа поверх его содержимого. */
+.preset__actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px 0 10px;
+  background: linear-gradient(to right, transparent, var(--surface-2) 12px);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.preset:hover .preset__actions,
+.preset:focus-within .preset__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.preset__action {
+  border: 0;
+  background: none;
+  padding: 0 3px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.preset__action:hover {
+  color: var(--accent);
 }
 
 .preset__formula {
   color: var(--muted);
-  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 

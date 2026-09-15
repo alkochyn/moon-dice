@@ -1,26 +1,24 @@
 import { useRef, useState } from "preact/hooks"
-import { DICE_SETS, findDiceSet } from "../data/diceSets"
 
 interface Props {
   formula: string
   error: string | null
   formulaHistory: string[]
-  diceSet: string
-  onDiceSetChange: (id: string) => void
   onFormulaChange: (value: string) => void
   onRoll: (formula: string) => void
   onSaveCurrent: () => void
+  onOpenSettings: () => void
 }
 
-export const RollBar = ({
+/** Поле ввода стоит прямо над историей: бросок и его результат рядом. */
+export const FormulaBar = ({
   formula,
   error,
   formulaHistory,
-  diceSet,
-  onDiceSetChange,
   onFormulaChange,
   onRoll,
   onSaveCurrent,
+  onOpenSettings,
 }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null)
   // -1 — «сейчас в поле то, что набрал игрок», иначе индекс в истории.
@@ -63,8 +61,6 @@ export const RollBar = ({
     }
   }
 
-  const dice = findDiceSet(diceSet).dice
-
   return (
     <div className="rollbar">
       <div className="rollbar__row">
@@ -74,7 +70,7 @@ export const RollBar = ({
         <input
           id="formula"
           ref={inputRef}
-          className={`input${error ? " input--invalid" : ""}`}
+          className={`input input--compact${error ? " input--invalid" : ""}`}
           type="text"
           inputMode="text"
           autocomplete="off"
@@ -85,38 +81,27 @@ export const RollBar = ({
           onKeyDown={handleKeyDown}
           title="Enter — бросок, ↑/↓ — прошлые формулы"
         />
-        <button className="btn btn--primary" onClick={() => onRoll(formula)}>
+        <button className="btn btn--compact btn--primary" onClick={() => onRoll(formula)}>
           Бросок
         </button>
-        <button className="btn btn--icon" onClick={onSaveCurrent} title="Сохранить формулу в пресеты">
+        <button
+          className="btn btn--compact btn--icon"
+          onClick={onSaveCurrent}
+          title="Сохранить формулу в свои броски"
+        >
           ★
+        </button>
+        <button
+          className="btn btn--compact btn--icon"
+          onClick={onOpenSettings}
+          title="Настройки игрока"
+          aria-label="Настройки игрока"
+        >
+          ⚙
         </button>
       </div>
 
       {error && <div className="error">{error}</div>}
-
-      {DICE_SETS.length > 1 && (
-        <div className="tabs tabs--sets">
-          {DICE_SETS.map((set) => (
-            <button
-              key={set.id}
-              className={`tab${set.id === diceSet ? " tab--active" : ""}`}
-              onClick={() => onDiceSetChange(set.id)}
-              title={`Набор кубов: ${set.title}`}
-            >
-              {set.title}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="dice-grid">
-        {dice.map((item) => (
-          <button key={item} className="btn" onClick={() => onRoll(item)} title={`Бросить ${item}`}>
-            {item}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }

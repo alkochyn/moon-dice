@@ -2,31 +2,27 @@ import type { BoardStatus } from "../board/sdk"
 
 interface Props {
   status: BoardStatus
-  displayName?: string
-  diagnosticsOpen: boolean
-  onToggleDiagnostics: () => void
-  onOpenSettings: () => void
 }
 
+/**
+ * Строка статуса показывается, только когда есть что сказать: в обычной работе
+ * «На доске» занимало место в самой тесной части панели и не сообщало ничего
+ * нового. А вот про локальный режим игрок знать обязан — иначе он уверен, что
+ * партия видит его броски, а они остались в одном браузере.
+ */
 const LABELS: Record<BoardStatus, string> = {
   loading: "Подключаемся к доске…",
-  connected: "На доске",
+  connected: "",
   offline: "Локальный режим — броски не уходят в общий журнал",
 }
 
-export const StatusBar = ({ status, displayName, diagnosticsOpen, onToggleDiagnostics, onOpenSettings }: Props) => (
-  <div className="status">
-    <span className={`status__dot status__dot--${status}`} />
-    <span>
-      {LABELS[status]}
-      {status === "connected" && displayName ? ` · ${displayName}` : ""}
-    </span>
-    <span className="status__spacer" />
-    <button className="status__link" onClick={onToggleDiagnostics}>
-      {diagnosticsOpen ? "скрыть" : "диагностика"}
-    </button>
-    <button className="btn btn--ghost btn--icon" onClick={onOpenSettings} title="Настройки игрока" aria-label="Настройки игрока">
-      ⚙
-    </button>
-  </div>
-)
+export const StatusBar = ({ status }: Props) => {
+  if (status === "connected") return null
+
+  return (
+    <div className="status">
+      <span className={`status__dot status__dot--${status}`} />
+      <span>{LABELS[status]}</span>
+    </div>
+  )
+}
