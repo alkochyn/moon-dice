@@ -290,6 +290,10 @@ button {
   overflow-y: auto;
 }
 
+/*
+ * Чип не шире половины ряда: длинное название иначе растягивало его во всю
+ * панель, и в строку помещался один бросок вместо двух.
+ */
 .preset {
   position: relative;
   display: inline-flex;
@@ -298,7 +302,13 @@ button {
   border-left: 3px solid var(--chip);
   border-radius: var(--radius);
   background: var(--surface);
-  max-width: 100%;
+  max-width: calc(50% - 3px);
+  cursor: grab;
+}
+
+.preset--dragging {
+  opacity: 0.45;
+  cursor: grabbing;
 }
 
 .preset:hover {
@@ -306,16 +316,27 @@ button {
 }
 
 .preset__name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
   border: 0;
   background: none;
   padding: 3px 8px;
-  font-size: 13px;
-  font-weight: 500;
   color: inherit;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+
+/* Формула сверху, название под ней и с обрезкой: полное видно подсказкой. */
+.preset__label {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 /* Действия всплывают у правого края чипа поверх его содержимого. */
@@ -354,7 +375,12 @@ button {
 }
 
 .preset__formula {
-  color: var(--muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 

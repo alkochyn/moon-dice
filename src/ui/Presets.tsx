@@ -29,6 +29,7 @@ interface Props {
   onEdit: (preset: Preset) => void
   onRoll: (preset: Preset) => void
   onRemove: (id: string) => void
+  onReorder: (sourceId: string, targetId: string) => void
 }
 
 export const Presets = ({
@@ -43,9 +44,11 @@ export const Presets = ({
   onEdit,
   onRoll,
   onRemove,
+  onReorder,
 }: Props) => {
   const [formulaError, setFormulaError] = useState<string | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
   const paletteRef = useRef<HTMLSpanElement>(null)
 
   // Палитра закрывается кликом мимо: она перекрывает соседние элементы формы,
@@ -114,14 +117,31 @@ export const Presets = ({
       ) : (
         <div className="presets">
           {items.map((preset) => (
-            <span key={preset.id} className="preset" style={{ "--chip": `var(--chip-${preset.color})` }}>
-              <button
-                className="preset__name"
-                onClick={() => onRoll(preset)}
-                title={`Бросить ${preset.formula}`}
-              >
-                {preset.name && `${preset.name} `}
+            <span
+              key={preset.id}
+              className={`preset${draggingId === preset.id ? " preset--dragging" : ""}`}
+              style={{ "--chip": `var(--chip-${preset.color})` }}
+              draggable
+              onDragStart={(event) => {
+                setDraggingId(preset.id)
+                event.dataTransfer?.setData("text/plain", preset.id)
+              }}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault()
+                const source = draggingId ?? event.dataTransfer?.getData("text/plain")
+                if (source) onReorder(source, preset.id)
+                setDraggingId(null)
+              }}
+              onDragEnd={() => setDraggingId(null)}
+            >
+              <button className="preset__name" onClick={() => onRoll(preset)}>
                 <span className="preset__formula">{preset.formula}</span>
+                {preset.name && (
+                  <span className="preset__label" title={preset.name}>
+                    {preset.name}
+                  </span>
+                )}
               </button>
               {/* Карандаш и крестик всплывают по наведению: постоянно они
                   съедали половину ширины чипа. */}

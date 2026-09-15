@@ -43,6 +43,24 @@ const isPreset = (value: unknown): value is Preset => {
 const sanitize = (items: unknown): Preset[] =>
   Array.isArray(items) ? items.filter(isPreset).map((p) => ({ ...p, color: p.color || "slate" })) : []
 
+/**
+ * Переставляет бросок на место другого. Порядок уезжает в хранилище доски и
+ * виден всей партии, поэтому логика вынесена сюда и покрыта тестами.
+ */
+export const reorderPresets = (items: Preset[], sourceId: string, targetId: string): Preset[] => {
+  if (sourceId === targetId) return items
+
+  const from = items.findIndex((item) => item.id === sourceId)
+  const to = items.findIndex((item) => item.id === targetId)
+  if (from === -1 || to === -1) return items
+
+  const next = [...items]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved as Preset)
+
+  return next
+}
+
 export const readLocalPresets = (): { items: Preset[]; updatedAt: number; firstRun: boolean } => {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)

@@ -18,6 +18,7 @@ import {
 import {
   makePreset,
   pushPersonalPresets,
+  reorderPresets,
   readLocalPresets,
   readSharedPresets,
   subscribeSharedPresets,
@@ -350,6 +351,14 @@ export const App = () => {
     writeJson(LOOK_KEY, appearance)
   }, [])
 
+  const reorderPreset = useCallback(
+    (sourceId: string, targetId: string) => {
+      if (scope === "mine") savePersonal(reorderPresets(personalRef.current.items, sourceId, targetId))
+      else saveShared(reorderPresets(shared, sourceId, targetId))
+    },
+    [savePersonal, saveShared, scope, shared],
+  )
+
   const changeDiceSet = useCallback((id: string) => {
     setDiceSet(id)
     writeJson(DICE_SET_KEY, id)
@@ -393,6 +402,7 @@ export const App = () => {
         onEdit={editPreset}
         onRoll={(preset) => roll(preset.formula, preset.name)}
         onRemove={removePreset}
+        onReorder={reorderPreset}
       />
 
       <FormulaBar
