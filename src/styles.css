@@ -339,9 +339,10 @@ button {
 }
 
 /*
- * Карточка броска: слева подпись и расклад, справа результат во всю высоту.
- * Крупное число у правого края — то, ради чего в журнал и смотрят, поэтому
- * оно всегда на одном месте и не зависит от длины имени и формулы.
+ * Карточка броска: слева две строки — кто и что кинул, затем формула с
+ * раскладом; справа колонка с результатом и временем. Крупное число у правого
+ * края всегда на одном месте и не зависит от длины имени и формулы, а время
+ * занимает пустоту под ним и не отнимает ширины у текста.
  */
 .entry {
   display: flex;
@@ -366,9 +367,14 @@ button {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 6px;
+  gap: 2px 6px;
   min-width: 0;
   font-size: 14px;
+}
+
+.entry__line--roll {
+  flex-wrap: nowrap;
+  gap: 5px;
 }
 
 /* Аватарка рисуется из инициалов и цвета по id: Miro картинок не отдаёт,
@@ -409,11 +415,11 @@ button {
   overflow-wrap: anywhere;
 }
 
-/* Формула — она же кнопка переброса, рядом с ней всплывают действия. */
+/* Формула — она же кнопка переброса; иконки действий ложатся прямо на неё. */
 .entry__roll {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
   flex: 0 1 auto;
   min-width: 0;
 }
@@ -438,24 +444,37 @@ button {
   text-decoration-style: solid;
 }
 
-/* Место под иконки держим всегда: иначе карточка дёргается при наведении. */
+/*
+ * Действия перекрывают формулу собой, а не встают рядом: в узкой панели
+ * лишние 40 пикселей справа стоят дороже, чем спрятанная под курсором формула.
+ * Фон совпадает с карточкой, поэтому формула под иконками не просвечивает.
+ */
 .entry__actions {
-  display: inline-flex;
-  gap: 2px;
-  flex: none;
-  visibility: hidden;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  min-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 6px;
+  background: var(--surface);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .entry:hover .entry__actions,
 .entry:focus-within .entry__actions {
-  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .entry__action {
   border: 0;
   background: none;
-  padding: 0 3px;
-  font-size: 13px;
+  padding: 0 2px;
+  font-size: 15px;
   line-height: 1;
   color: var(--muted);
 }
@@ -464,10 +483,17 @@ button {
   color: var(--accent);
 }
 
+.entry__arrow {
+  flex: none;
+  color: var(--border);
+  font-size: 12px;
+}
+
 .entry__detail {
-  margin-top: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -477,7 +503,8 @@ button {
 .entry__totals {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: stretch;
+  gap: 1px;
   flex: none;
   align-self: stretch;
   justify-content: center;
@@ -503,6 +530,16 @@ button {
 .entry__totals--many .entry__total {
   font-size: 15px;
   min-width: 40px;
+}
+
+/* Время живёт в пустоте под результатом и не отнимает ширины у текста. */
+.entry__time {
+  flex: none;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- История формул --- */

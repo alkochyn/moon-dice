@@ -10,6 +10,8 @@ interface Props {
 
 const time = (ts: number): string => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
 
+const fullTime = (ts: number): string => new Date(ts).toLocaleString("ru-RU")
+
 export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => (
   <section className="section section--log">
     <div className="section__head">
@@ -29,14 +31,17 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
             <article
               key={entry.id}
               className={`entry${entry.userId === currentUserId ? " entry--mine" : ""}`}
-              title={`${entry.userName}, ${time(entry.ts)}`}
+              title={`${entry.userName}, ${fullTime(entry.ts)}`}
             >
               <div className="entry__body">
                 <div className="entry__line">
                   <Avatar name={entry.userName} userId={entry.userId} />
                   <span className="entry__user">{entry.userName}</span>
                   {entry.label && <span className="entry__label">{entry.label}</span>}
+                </div>
 
+                <div className="entry__line entry__line--roll">
+                  {/* Иконки всплывают поверх формулы, перекрывая её собой. */}
                   <span className="entry__roll">
                     <button className="entry__formula" onClick={() => onRepeat(entry.expression)} title="Перебросить">
                       {entry.expression}
@@ -60,10 +65,11 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                       </button>
                     </span>
                   </span>
-                </div>
 
-                <div className="entry__detail" title={detail}>
-                  {detail}
+                  <span className="entry__arrow">→</span>
+                  <span className="entry__detail" title={detail}>
+                    {detail}
+                  </span>
                 </div>
               </div>
 
@@ -73,6 +79,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                     {result.total}
                   </span>
                 ))}
+                <span className="entry__time">{time(entry.ts)}</span>
               </span>
             </article>
           )
