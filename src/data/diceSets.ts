@@ -6,13 +6,16 @@
 export interface DiceSet {
   id: string
   title: string
+  /** Расшифровка для подсказки: по «basic» и «DCC» не догадаться. */
+  hint: string
   dice: string[]
 }
 
 export const DICE_SETS: DiceSet[] = [
   {
     id: "standard",
-    title: "Обычный",
+    title: "basic",
+    hint: "Стандартный набор кубов",
     dice: ["d4", "d6", "d8", "d10", "d12", "d20", "d100", "2d6"],
   },
   {
@@ -20,6 +23,7 @@ export const DICE_SETS: DiceSet[] = [
     // по ней вверх-вниз, поэтому нужны все промежуточные грани.
     id: "dcc",
     title: "DCC",
+    hint: "Dungeon Crawl Classics",
     dice: ["d2", "d3", "d4", "d5", "d6", "d7", "d8", "d10", "d12", "d14", "d16", "d20", "d24", "d30", "d100"],
   },
 ]

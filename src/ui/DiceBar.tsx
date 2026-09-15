@@ -6,21 +6,40 @@ interface Props {
   onDiceSetChange: (id: string) => void
   onToggleCollapsed: () => void
   onRoll: (formula: string) => void
+  onOpenHelp: () => void
+  onOpenSettings: () => void
 }
 
-export const DiceBar = ({ diceSet, collapsed, onDiceSetChange, onToggleCollapsed, onRoll }: Props) => {
+export const DiceBar = ({
+  diceSet,
+  collapsed,
+  onDiceSetChange,
+  onToggleCollapsed,
+  onRoll,
+  onOpenHelp,
+  onOpenSettings,
+}: Props) => {
   const dice = findDiceSet(diceSet).dice
 
   return (
     <div className="dicebar">
       <div className="dicebar__head">
+        <button
+          className="btn btn--ghost btn--icon"
+          onClick={onToggleCollapsed}
+          title={collapsed ? "Показать кубы" : "Свернуть кубы"}
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? "▾" : "▴"}
+        </button>
+
         <div className="tabs">
           {DICE_SETS.map((set) => (
             <button
               key={set.id}
               className={`tab${set.id === diceSet ? " tab--active" : ""}`}
               onClick={() => onDiceSetChange(set.id)}
-              title={`Набор кубов: ${set.title}`}
+              title={set.hint}
             >
               {set.title}
             </button>
@@ -29,13 +48,16 @@ export const DiceBar = ({ diceSet, collapsed, onDiceSetChange, onToggleCollapsed
 
         <span className="section__spacer" />
 
+        <button className="btn btn--ghost btn--icon" onClick={onOpenHelp} title="Как кидать" aria-label="Справка">
+          ?
+        </button>
         <button
           className="btn btn--ghost btn--icon"
-          onClick={onToggleCollapsed}
-          title={collapsed ? "Показать кубы" : "Свернуть кубы"}
-          aria-expanded={!collapsed}
+          onClick={onOpenSettings}
+          title="Настройки игрока"
+          aria-label="Настройки игрока"
         >
-          {collapsed ? "▾" : "▴"}
+          ⚙
         </button>
       </div>
 

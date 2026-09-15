@@ -422,6 +422,8 @@ export const App = () => {
         onDiceSetChange={changeDiceSet}
         onToggleCollapsed={toggleDiceCollapsed}
         onRoll={roll}
+        onOpenHelp={() => setHelpOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <Presets
@@ -445,8 +447,6 @@ export const App = () => {
         onFormulaChange={setFormula}
         onRoll={roll}
         onSaveCurrent={() => savePresetNow(formula)}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenHelp={() => setHelpOpen(true)}
       />
 
       {helpOpen && <Help onClose={() => setHelpOpen(false)} />}
