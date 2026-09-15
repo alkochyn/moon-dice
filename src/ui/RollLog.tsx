@@ -4,7 +4,8 @@ import { Avatar } from "./Avatar"
 interface Props {
   entries: RollEntry[]
   currentUserId: string
-  onRepeat: (formula: string) => void
+  /** Отдаём запись целиком: в перебросе должно ехать и название броска. */
+  onRepeat: (entry: RollEntry) => void
   onSave: (entry: RollEntry) => void
 }
 
@@ -31,7 +32,6 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
             <article
               key={entry.id}
               className={`entry${entry.userId === currentUserId ? " entry--mine" : ""}`}
-              title={`${entry.userName}, ${fullTime(entry.ts)}`}
             >
               <div className="entry__body">
                 <div className="entry__line">
@@ -50,15 +50,14 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                       формула скрывается под звёздочкой, и кликать было бы не по чему. */}
                   <button
                     className="entry__repeat"
-                    onClick={() => onRepeat(entry.expression)}
-                    title="Перебросить"
+                    onClick={() => onRepeat(entry)}
                     aria-label={`Перебросить ${entry.expression}`}
                   >
                     ↻
                   </button>
 
                   <span className="entry__roll">
-                    <button className="entry__formula" onClick={() => onRepeat(entry.expression)} title="Перебросить">
+                    <button className="entry__formula" onClick={() => onRepeat(entry)}>
                       {entry.expression}
                     </button>
                     {/* Звёздочка всплывает поверх формулы, перекрывая её собой. */}
@@ -66,7 +65,6 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                       <button
                         className="entry__action"
                         onClick={() => onSave(entry)}
-                        title="Сохранить этот бросок"
                         aria-label={`Сохранить ${entry.expression}`}
                       >
                         ★ сохранить
@@ -75,9 +73,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                   </span>
 
                   <span className="entry__arrow">→</span>
-                  <span className="entry__detail" title={detail}>
-                    {detail}
-                  </span>
+                  <span className="entry__detail">{detail}</span>
                 </div>
               </div>
 
@@ -87,7 +83,9 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                     {result.total}
                   </span>
                 ))}
-                <span className="entry__time">{time(entry.ts)}</span>
+                <span className="entry__time" title={fullTime(entry.ts)}>
+                  {time(entry.ts)}
+                </span>
               </span>
             </article>
           )

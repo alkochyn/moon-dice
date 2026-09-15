@@ -423,9 +423,11 @@ export const App = () => {
       <RollLog
         entries={entries}
         currentUserId={playerId}
-        onRepeat={(value) => {
-          setFormula(value)
-          roll(value)
+        onRepeat={(entry) => {
+          // Строка с меткой уезжает и в поле ввода: повтор по Enter сохранит название.
+          const source = toSource(entry.expression, entry.label)
+          setFormula(source)
+          roll(source)
         }}
         onSave={savePresetFromEntry}
       />

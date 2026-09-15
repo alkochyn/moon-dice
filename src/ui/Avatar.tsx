@@ -17,7 +17,7 @@ export const Avatar = ({ name, userId, icon, color, size }: Props) => {
 
   return (
     // aria-hidden: имя игрока стоит рядом текстом, второй раз его озвучивать незачем.
-    <span className="avatar" style={style} title={name} aria-hidden="true">
+    <span className="avatar" style={style} aria-hidden="true">
       {path ? (
         <svg className="avatar__icon" viewBox={ICON_VIEWBOX} xmlns="http://www.w3.org/2000/svg">
           <path d={path} fill="currentColor" />
