@@ -16,7 +16,10 @@ export const tokenize = (input: string): Token[] => {
   let i = 0
 
   while (i < input.length) {
-    const ch = input[i] as string
+    // Берём кодовую точку, а не одну 16-битную единицу: эмодзи занимает две, и по
+    // символу от него оставалась половина суррогатной пары — в сообщении об
+    // ошибке вместо «🙏» показывался мусор.
+    const ch = String.fromCodePoint(input.codePointAt(i) as number)
 
     if (ch === " " || ch === "\t") {
       i++
@@ -42,31 +45,31 @@ export const tokenize = (input: string): Token[] => {
     if (ch === "+" || ch === "-" || ch === "*" || ch === "/" || ch === "×" || ch === "÷") {
       const normalized = ch === "×" ? "*" : ch === "÷" ? "/" : ch
       tokens.push({ type: "op", value: normalized, pos: i })
-      i++
+      i += ch.length
       continue
     }
 
     if (ch === "(") {
       tokens.push({ type: "lparen", value: ch, pos: i })
-      i++
+      i += ch.length
       continue
     }
 
     if (ch === ")") {
       tokens.push({ type: "rparen", value: ch, pos: i })
-      i++
+      i += ch.length
       continue
     }
 
     if (ch === "#") {
       tokens.push({ type: "hash", value: ch, pos: i })
-      i++
+      i += ch.length
       continue
     }
 
     if (ch === "!") {
       tokens.push({ type: "bang", value: ch, pos: i })
-      i++
+      i += ch.length
       continue
     }
 

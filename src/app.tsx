@@ -235,7 +235,10 @@ export const App = () => {
       try {
         result = rollFormula(source)
       } catch (failure) {
-        setError(failure instanceof DiceError ? failure.message : "Не удалось разобрать формулу")
+        const message = failure instanceof DiceError ? failure.message : "Не удалось разобрать формулу"
+        // Без имени пресета ошибка висит под полем ввода и выглядит так, будто
+        // сломано то, что игрок печатал, а не то, по чему он кликнул.
+        setError(presetName ? `«${presetName}»: ${message}` : message)
         return
       }
       setError(null)

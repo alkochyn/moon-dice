@@ -151,6 +151,21 @@ describe("ошибки разбора", () => {
   it("validateFormula пропускает корректную формулу", () => {
     expect(validateFormula("4d6kh3 + 2").ok).toBe(true)
   })
+
+  it("показывает эмодзи в сообщении целиком, а не половину суррогатной пары", () => {
+    const result = validateFormula("🙏")
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.message).toContain("🙏")
+  })
+
+  it("не спотыкается об эмодзи в середине формулы", () => {
+    const result = validateFormula("1d20+🎲")
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.message).toContain("🎲")
+      expect(result.pos).toBe(5)
+    }
+  })
 })
 
 describe("честность генератора", () => {

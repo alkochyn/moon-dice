@@ -108,19 +108,19 @@ delapouite/vampire-dracula
   .filter(Boolean)
 
 /**
- * Режем точность координат до одного знака. Иконки нарисованы в системе
- * 512x512, а показываются размером около 20 пикселей: 0.1 единицы это 0.004
- * пикселя на экране. Разницы не видно, а исходник худеет заметно.
+ * Пути берём как есть, только схлопываем пробелы.
+ *
+ * Округлять координаты нельзя: в путях game-icons сотни ОТНОСИТЕЛЬНЫХ команд,
+ * и погрешность каждой накапливается вдоль контура — при округлении до одного
+ * знака половина иконок превратилась в обрубки. Если размер снова станет
+ * проблемой, резать нужно svgo: он считает накопленную ошибку, а не правит
+ * числа регуляркой.
  */
-const roundPath = (d) =>
-  d
-    .replace(/-?\d+\.\d+/g, (number) => String(Math.round(Number(number) * 10) / 10))
-    .replace(/\s+/g, " ")
-    .trim()
+const cleanPath = (d) => d.replace(/\s+/g, " ").trim()
 
 const extractPaths = (svg) => {
   const found = [...svg.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((match) => match[1])
-  return found.filter((d) => d !== BACKGROUND).map(roundPath)
+  return found.filter((d) => d !== BACKGROUND).map(cleanPath)
 }
 
 const results = []

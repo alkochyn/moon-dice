@@ -1,3 +1,6 @@
+import { useState } from "preact/hooks"
+
+import { validateFormula } from "../dice"
 import { PRESET_COLORS, type Preset } from "../board/presets"
 
 export type PresetScope = "mine" | "shared"
@@ -37,9 +40,30 @@ export const Presets = ({
   onRoll,
   onRemove,
 }: Props) => {
+  const [formulaError, setFormulaError] = useState<string | null>(null)
+
   const locked = scope === "shared" && !sharedAvailable
   const patch = (fields: Partial<PresetDraft>): void => {
     if (draft) onDraftChange({ ...draft, ...fields })
+    setFormulaError(null)
+  }
+
+  /**
+   * Формулу проверяем до сохранения: сохранённый бросок с мусором в формуле
+   * выглядит рабочим до первого клика, а ошибку игрок увидит уже в другом месте
+   * панели и не поймёт, откуда она.
+   */
+  const submit = (): void => {
+    if (!draft) return
+
+    const check = validateFormula(draft.formula)
+    if (!check.ok) {
+      setFormulaError(check.message)
+      return
+    }
+
+    setFormulaError(null)
+    onDraftSubmit()
   }
 
   return (
@@ -107,14 +131,14 @@ export const Presets = ({
             placeholder="Название, например «Урон основной атакой»"
             value={draft.name}
             onInput={(e) => patch({ name: (e.target as HTMLInputElement).value })}
-            onKeyDown={(e) => e.key === "Enter" && onDraftSubmit()}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
           />
           <input
             className="input"
             placeholder="Формула"
             value={draft.formula}
             onInput={(e) => patch({ formula: (e.target as HTMLInputElement).value })}
-            onKeyDown={(e) => e.key === "Enter" && onDraftSubmit()}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
           />
           <span className="colors">
             {PRESET_COLORS.map((item) => (
@@ -127,9 +151,10 @@ export const Presets = ({
               />
             ))}
           </span>
-          <button className="btn btn--primary" onClick={onDraftSubmit}>
+          <button className="btn btn--primary" onClick={submit}>
             {draft.id ? "Сохранить" : "Добавить"}
           </button>
+          {formulaError && <div className="error">{formulaError}</div>}
         </div>
       )}
     </section>
