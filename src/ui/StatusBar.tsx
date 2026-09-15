@@ -2,9 +2,10 @@ import type { BoardStatus } from "../board/sdk"
 
 interface Props {
   status: BoardStatus
-  userName?: string
+  displayName?: string
   diagnosticsOpen: boolean
   onToggleDiagnostics: () => void
+  onOpenSettings: () => void
 }
 
 const LABELS: Record<BoardStatus, string> = {
@@ -13,16 +14,19 @@ const LABELS: Record<BoardStatus, string> = {
   offline: "Локальный режим — броски не уходят в общий журнал",
 }
 
-export const StatusBar = ({ status, userName, diagnosticsOpen, onToggleDiagnostics }: Props) => (
+export const StatusBar = ({ status, displayName, diagnosticsOpen, onToggleDiagnostics, onOpenSettings }: Props) => (
   <div className="status">
     <span className={`status__dot status__dot--${status}`} />
     <span>
       {LABELS[status]}
-      {status === "connected" && userName ? ` · ${userName}` : ""}
+      {status === "connected" && displayName ? ` · ${displayName}` : ""}
     </span>
     <span className="status__spacer" />
     <button className="status__link" onClick={onToggleDiagnostics}>
       {diagnosticsOpen ? "скрыть" : "диагностика"}
+    </button>
+    <button className="btn btn--ghost btn--icon" onClick={onOpenSettings} title="Настройки игрока" aria-label="Настройки игрока">
+      ⚙
     </button>
   </div>
 )

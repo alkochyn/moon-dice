@@ -33,11 +33,13 @@ import { RollBar } from "./ui/RollBar"
 import { Presets, type PresetDraft, type PresetScope } from "./ui/Presets"
 import { RollLog } from "./ui/RollLog"
 import { Diagnostics } from "./ui/Diagnostics"
+import { PlayerSettings } from "./ui/PlayerSettings"
 
 const FORMULA_HISTORY_KEY = "dice.formulas.v1"
 const LOCAL_USER_KEY = "dice.localUserId.v1"
 const POST_TO_BOARD_KEY = "dice.postToBoard.v1"
 const DICE_SET_KEY = "dice.set.v1"
+const CHARACTER_KEY = "dice.character.v1"
 const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
 const POLL_INTERVAL_MS = 4000
@@ -88,15 +90,19 @@ export const App = () => {
   const [diceSet, setDiceSet] = useState<string>(DEFAULT_DICE_SET)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [postToBoard, setPostToBoard] = useState(false)
+  const [character, setCharacter] = useState("")
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
   const postToBoardRef = useRef(false)
   const anonId = useRef<string>("")
+  const characterRef = useRef("")
 
   statusRef.current = status
   personalRef.current = personal
   postToBoardRef.current = postToBoard
+  characterRef.current = character
 
   // Локальное состояние поднимаем сразу: панель обязана быть рабочей ещё до
   // того, как выяснится, доехал ли SDK.
@@ -106,6 +112,7 @@ export const App = () => {
     setFormulaHistory(readJson<string[]>(FORMULA_HISTORY_KEY, []))
     setPostToBoard(readJson<boolean>(POST_TO_BOARD_KEY, false))
     setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
+    setCharacter(readJson<string>(CHARACTER_KEY, ""))
 
     const local = readLocalPresets()
     setPersonal({ updatedAt: local.updatedAt, items: local.items })
@@ -226,7 +233,7 @@ export const App = () => {
         id: newId(),
         ts: Date.now(),
         userId: user?.id ?? anonId.current,
-        userName: user?.name ?? "Вы",
+        userName: characterRef.current || user?.name || "Вы",
         expression: result.expression,
         ...(label ? { label } : {}),
         results: result.rolls.map((item) => ({ total: item.total, detail: item.detail })),
@@ -297,6 +304,11 @@ export const App = () => {
     [savePersonal, saveShared, scope, shared],
   )
 
+  const saveCharacter = useCallback((name: string) => {
+    setCharacter(name)
+    writeJson(CHARACTER_KEY, name)
+  }, [])
+
   const changeDiceSet = useCallback((id: string) => {
     setDiceSet(id)
     writeJson(DICE_SET_KEY, id)
@@ -311,10 +323,20 @@ export const App = () => {
     <div className="app">
       <StatusBar
         status={status}
-        {...(user ? { userName: user.name } : {})}
+        {...(character || user ? { displayName: character || (user?.name as string) } : {})}
         diagnosticsOpen={diagnosticsOpen}
         onToggleDiagnostics={() => setDiagnosticsOpen((open) => !open)}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
+
+      {settingsOpen && (
+        <PlayerSettings
+          character={character}
+          {...(user ? { accountName: user.name } : {})}
+          onSave={saveCharacter}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {diagnosticsOpen && <Diagnostics status={status} />}
 
