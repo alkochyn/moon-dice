@@ -108,7 +108,7 @@ export const Presets = ({
             Мои
           </button>
           <button className={`tab${scope === "shared" ? " tab--active" : ""}`} onClick={() => onScopeChange("shared")}>
-            Доски
+            Общие
           </button>
         </div>
       </div>
