@@ -5,10 +5,14 @@ import { PRESET_COLORS, type Preset } from "../board/presets"
 
 export type PresetScope = "mine" | "shared"
 
-/** Черновик формы: без id — новый пресет, с id — правка существующего. */
+/**
+ * Черновик формы: без id — новый пресет, с id — правка существующего.
+ *
+ * Отдельного поля названия нет: формула и так умеет метку после двоеточия,
+ * а два поля для одного и того же путали — их легко заполнить наоборот.
+ */
 export interface PresetDraft {
   id?: string
-  name: string
   formula: string
   color: string
 }
@@ -101,7 +105,8 @@ export const Presets = ({
                 onClick={() => onRoll(preset)}
                 title={`Бросить ${preset.formula}`}
               >
-                {preset.name} <span className="preset__formula">{preset.formula}</span>
+                {preset.name && `${preset.name} `}
+                <span className="preset__formula">{preset.formula}</span>
               </button>
               <button
                 className="btn btn--ghost btn--icon"
@@ -127,15 +132,8 @@ export const Presets = ({
       {draft && !locked && (
         <div className="preset-form">
           <input
-            className="input"
-            placeholder="Название, например «Урон основной атакой»"
-            value={draft.name}
-            onInput={(e) => patch({ name: (e.target as HTMLInputElement).value })}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-          <input
-            className="input"
-            placeholder="Формула"
+            className="input preset-form__formula"
+            placeholder="1d8+3 : Урон основной атакой"
             value={draft.formula}
             onInput={(e) => patch({ formula: (e.target as HTMLInputElement).value })}
             onKeyDown={(e) => e.key === "Enter" && submit()}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 
 import "./styles.css"
-import { DiceError, rollFormula } from "./dice"
+import { DiceError, parseFormula, rollFormula } from "./dice"
 import { DEFAULT_DICE_SET } from "./data/diceSets"
 import { ensureSdk, getCurrentUser, watchLateSdk, type BoardStatus, type BoardUser } from "./board/sdk"
 import {
@@ -283,26 +283,38 @@ export const App = () => {
     [rememberFormula, user],
   )
 
+  /** Собирает строку формы из сохранённого броска: формула плюс метка. */
+  const toSource = (expression: string, label?: string): string =>
+    label ? `${expression} : ${label}` : expression
+
   const openDraft = useCallback(() => {
-    setPresetDraft({ name: "", formula: formula.trim(), color: "slate" })
+    setPresetDraft({ formula: formula.trim(), color: "slate" })
   }, [formula])
 
   /** Звёздочка на карточке броска: сохраняем его формулу вместе с названием. */
   const savePresetFromEntry = useCallback((entry: RollEntry) => {
     setScope("mine")
-    setPresetDraft({ name: entry.label ?? "", formula: entry.expression, color: "slate" })
+    setPresetDraft({ formula: toSource(entry.expression, entry.label), color: "slate" })
   }, [])
 
   const editPreset = useCallback((preset: Preset) => {
-    setPresetDraft({ id: preset.id, name: preset.name, formula: preset.formula, color: preset.color })
+    setPresetDraft({ id: preset.id, formula: toSource(preset.formula, preset.name), color: preset.color })
   }, [])
 
   const submitDraft = useCallback(() => {
     if (!presetDraft) return
 
-    const formulaValue = presetDraft.formula.trim()
-    if (!formulaValue) return
-    const name = presetDraft.name.trim() || formulaValue
+    // Название живёт в самой формуле после двоеточия — разбираем и раскладываем
+    // по полям хранения, чтобы чип и подпись в журнале остались прежними.
+    let parsed
+    try {
+      parsed = parseFormula(presetDraft.formula)
+    } catch {
+      return
+    }
+
+    const formulaValue = parsed.expression
+    const name = parsed.label ?? ""
     const editing = presetDraft.id
 
     const apply = (items: Preset[]): Preset[] =>

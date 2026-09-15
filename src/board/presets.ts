@@ -26,9 +26,11 @@ export const DEFAULT_PRESETS: Preset[] = [
   { id: "default-stats", name: "Характеристика", formula: "4d6kh3", color: "blue" },
 ]
 
+/** Название берётся из метки формулы и может быть пустым — тогда чип покажет
+ *  только саму формулу, без дублирования. */
 export const makePreset = (name: string, formula: string, color: string = "slate"): Preset => ({
   id: newId(),
-  name: name.trim() || formula.trim(),
+  name: name.trim(),
   formula: formula.trim(),
   color,
 })
