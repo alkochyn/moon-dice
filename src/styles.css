@@ -375,6 +375,35 @@ button {
   align-items: center;
 }
 
+/* В форме сохранения виден один кружок текущего цвета, палитра открывается
+   по клику: двенадцать кружков в строке занимали больше места, чем сама форма. */
+.color-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.color--current {
+  border-color: var(--border);
+}
+
+.color-picker__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  /* Кружок стоит у правого края формы, поэтому палитра раскрывается влево:
+     от левого края её обрезало границей панели. */
+  right: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+  gap: 5px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
+}
+
 .color {
   width: 18px;
   height: 18px;

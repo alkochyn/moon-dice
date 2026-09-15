@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks"
+import { useEffect, useRef, useState } from "preact/hooks"
 
 import { validateFormula } from "../dice"
 import { PRESET_COLORS, type Preset } from "../board/presets"
@@ -45,6 +45,21 @@ export const Presets = ({
   onRemove,
 }: Props) => {
   const [formulaError, setFormulaError] = useState<string | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const paletteRef = useRef<HTMLSpanElement>(null)
+
+  // Палитра закрывается кликом мимо: она перекрывает соседние элементы формы,
+  // и оставлять её открытой после выбора незачем.
+  useEffect(() => {
+    if (!paletteOpen) return undefined
+
+    const onDown = (event: MouseEvent): void => {
+      if (!paletteRef.current?.contains(event.target as Node)) setPaletteOpen(false)
+    }
+
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [paletteOpen])
 
   const locked = scope === "shared" && !sharedAvailable
   const patch = (fields: Partial<PresetDraft>): void => {
@@ -142,16 +157,30 @@ export const Presets = ({
             onInput={(e) => patch({ formula: (e.target as HTMLInputElement).value })}
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
-          <span className="colors">
-            {PRESET_COLORS.map((item) => (
-              <button
-                key={item}
-                className={`color${draft.color === item ? " color--active" : ""}`}
-                style={{ "--chip": `var(--chip-${item})` }}
-                onClick={() => patch({ color: item })}
-                aria-label={`Цвет ${item}`}
-              />
-            ))}
+          <span className="color-picker" ref={paletteRef}>
+            <button
+              className="color color--current"
+              style={{ "--chip": `var(--chip-${draft.color})` }}
+              onClick={() => setPaletteOpen((open) => !open)}
+              aria-label="Цвет метки"
+              aria-expanded={paletteOpen}
+            />
+            {paletteOpen && (
+              <span className="color-picker__menu">
+                {PRESET_COLORS.map((item) => (
+                  <button
+                    key={item}
+                    className={`color${draft.color === item ? " color--active" : ""}`}
+                    style={{ "--chip": `var(--chip-${item})` }}
+                    onClick={() => {
+                      patch({ color: item })
+                      setPaletteOpen(false)
+                    }}
+                    aria-label={`Цвет ${item}`}
+                  />
+                ))}
+              </span>
+            )}
           </span>
           <button className="btn btn--primary" onClick={submit}>
             {draft.id ? "Сохранить" : "Добавить"}
