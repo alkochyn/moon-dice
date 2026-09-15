@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { MAX_ENTRIES, mergeEntries, newId, type RollEntry } from "./log"
+import { MAX_ENTRIES, mergeEntries, newId, nextEntries, type RollEntry } from "./log"
 
 const entry = (id: string, ts: number): RollEntry => ({
   id,
@@ -44,5 +44,32 @@ describe("сведение журнала бросков", () => {
   it("выдаёт уникальные идентификаторы записей", () => {
     const ids = new Set(Array.from({ length: 500 }, newId))
     expect(ids.size).toBe(500)
+  })
+})
+
+describe("обновление журнала опросом", () => {
+  it("возвращает тот же массив, когда с доски приехало то же самое", () => {
+    const prev = [entry("b", 2), entry("a", 1)]
+    // Ровно тот же массив по ссылке: панель не должна перерисовываться каждые
+    // несколько секунд только потому, что опрос сходил на доску.
+    expect(nextEntries(prev, [entry("a", 1), entry("b", 2)])).toBe(prev)
+  })
+
+  it("возвращает новый массив, когда появился чужой бросок", () => {
+    const prev = [entry("a", 1)]
+    const next = nextEntries(prev, [entry("a", 1), entry("новый", 5)])
+
+    expect(next).not.toBe(prev)
+    expect(next.map((item) => item.id)).toEqual(["новый", "a"])
+  })
+
+  it("не считает изменением пустой ответ доски", () => {
+    const prev = [entry("a", 1)]
+    expect(nextEntries(prev, [])).toBe(prev)
+  })
+
+  it("поднимает журнал с нуля при первом ответе доски", () => {
+    const next = nextEntries([], [entry("a", 1)])
+    expect(next).toHaveLength(1)
   })
 })

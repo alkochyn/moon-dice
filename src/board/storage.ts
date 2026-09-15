@@ -76,18 +76,39 @@ export const probeBoardStorage = async (): Promise<string> => {
 
   try {
     await collection.get("__probe")
-    return "доступно"
   } catch (error) {
-    return `ошибка: ${(error as Error).name} ${(error as Error).message}`
+    return `чтение не работает: ${(error as Error).name} ${(error as Error).message}`
+  }
+
+  // Проверяем именно запись с чтением обратно: общий журнал держится на ней,
+  // а без boards:write чтение продолжает работать — и всё выглядит исправным,
+  // пока броски тихо не уходят в никуда.
+  try {
+    const stamp = Date.now()
+    await collection.set("__probe", stamp)
+    const back = await collection.get("__probe")
+
+    if (back !== stamp) return "запись не сохраняется: прочиталось другое значение"
+    return "чтение и запись работают"
+  } catch (error) {
+    return `запись запрещена: ${(error as Error).name} ${(error as Error).message} — вероятно, не выдан скоуп boards:write`
   }
 }
 
-export const subscribeKey = <T>(key: string, handler: (value: T | undefined) => void): (() => void) => {
+export const subscribeKey = <T>(
+  key: string,
+  handler: (value: T | undefined) => void,
+  onError?: (message: string) => void,
+): (() => void) => {
   const collection = getCollection()
   if (!collection) return () => {}
 
   const wrapped = (value: unknown): void => handler(value as T | undefined)
-  void collection.onValue(key, wrapped)
+  // Молча провалившаяся подписка выглядит как «у других ничего не появляется»,
+  // поэтому отказ обязан доехать до интерфейса.
+  collection.onValue(key, wrapped).catch((error: unknown) => {
+    onError?.(`${(error as Error).name} ${(error as Error).message}`)
+  })
 
   return () => {
     void collection.offValue(key, wrapped)

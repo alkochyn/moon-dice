@@ -169,6 +169,16 @@ button {
   font-size: 12px;
 }
 
+/* Отказ общего журнала обязан быть заметен: без него партия думает, что все
+   видят её броски, а на деле они остались в одном браузере. */
+.warning {
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
 .dice-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

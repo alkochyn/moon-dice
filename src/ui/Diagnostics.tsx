@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks"
 import { getMiro, isInsideMiro, isPanelMode, probeUser, type BoardStatus } from "../board/sdk"
 import { probeBoardStorage } from "../board/storage"
+import { countLiveUpdates, describeBoardLog } from "../board/log"
 
 /**
  * Экран для разбора полётов: игрок открывает, жмёт «скопировать» и присылает
@@ -52,6 +53,8 @@ export const Diagnostics = ({ status }: Props) => {
   const [ping, setPing] = useState("проверяем…")
   const [boardStorage, setBoardStorage] = useState("проверяем…")
   const [player, setPlayer] = useState("проверяем…")
+  const [boardLog, setBoardLog] = useState("проверяем…")
+  const [live, setLive] = useState(0)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -61,6 +64,8 @@ export const Diagnostics = ({ status }: Props) => {
   useEffect(() => {
     void probeBoardStorage().then(setBoardStorage)
     void probeUser().then(setPlayer)
+    void describeBoardLog().then(setBoardLog)
+    setLive(countLiveUpdates())
   }, [status])
 
   const rows: Rows = [
@@ -72,6 +77,8 @@ export const Diagnostics = ({ status }: Props) => {
     ["Отклик", ping],
     ["Игрок", player],
     ["Хранилище доски", boardStorage],
+    ["Журнал на доске", boardLog],
+    ["Живые обновления", live ? `${live} получено подпиской` : "подпиской не приходили, журнал едет опросом"],
     ["Хранилище браузера", localStorageState()],
     ["Куки", navigator.cookieEnabled ? "разрешены" : "заблокированы для стороннего кадра"],
     ["Офлайн-кэш", swState()],

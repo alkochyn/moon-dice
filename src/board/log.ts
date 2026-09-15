@@ -30,6 +30,18 @@ export const mergeEntries = (...lists: RollEntry[][]): RollEntry[] => {
   return [...byId.values()].sort((a, b) => b.ts - a.ts).slice(0, MAX_ENTRIES)
 }
 
+/**
+ * Сведение журнала для подписки и опроса. Если ничего нового не приехало,
+ * возвращает прежний массив — иначе опрос раз в несколько секунд гонял бы
+ * перерисовку панели вхолостую.
+ */
+export const nextEntries = (prev: RollEntry[], incoming: RollEntry[]): RollEntry[] => {
+  const merged = mergeEntries(prev, incoming)
+  const same = merged.length === prev.length && merged.every((entry, index) => entry.id === prev[index]?.id)
+
+  return same ? prev : merged
+}
+
 export const readLocalLog = (): RollEntry[] => {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
@@ -53,6 +65,17 @@ export const readBoardLog = async (): Promise<RollEntry[]> => {
   return Array.isArray(stored) ? stored : []
 }
 
+/** Диагностика: что реально лежит в журнале доски прямо сейчас. */
+export const describeBoardLog = async (): Promise<string> => {
+  const stored = await readKey<RollEntry[]>(LOG_KEY)
+  if (!Array.isArray(stored)) return "пуст или недоступен"
+
+  const last = stored[stored.length - 1]
+  const when = last ? new Date(last.ts).toLocaleTimeString("ru-RU") : "—"
+
+  return `${stored.length} записей, последняя от «${last?.userName ?? "?"}» в ${when}`
+}
+
 export const publishEntry = async (entry: RollEntry): Promise<boolean> => {
   const next = await updateKey<RollEntry[]>(LOG_KEY, (current) =>
     mergeEntries(Array.isArray(current) ? current : [], [entry]),
@@ -61,5 +84,29 @@ export const publishEntry = async (entry: RollEntry): Promise<boolean> => {
   return next !== null
 }
 
-export const subscribeBoardLog = (handler: (entries: RollEntry[]) => void): (() => void) =>
-  subscribeKey<RollEntry[]>(LOG_KEY, (value) => handler(Array.isArray(value) ? value : []))
+/**
+ * Сколько раз подписка принесла чужое изменение. Первый вызов не считаем —
+ * это начальное значение, которое Miro отдаёт сразу при подписке.
+ * Нужно, чтобы отличать «живые обновления работают» от «журнал приезжает
+ * только опросом».
+ */
+let liveUpdates = 0
+
+export const countLiveUpdates = (): number => liveUpdates
+
+export const subscribeBoardLog = (
+  handler: (entries: RollEntry[]) => void,
+  onError?: (message: string) => void,
+): (() => void) => {
+  let initial = true
+
+  return subscribeKey<RollEntry[]>(
+    LOG_KEY,
+    (value) => {
+      if (initial) initial = false
+      else liveUpdates++
+      handler(Array.isArray(value) ? value : [])
+    },
+    onError,
+  )
+}

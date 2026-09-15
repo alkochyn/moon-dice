@@ -7,7 +7,9 @@ import { ensureSdk, getCurrentUser, watchLateSdk, type BoardStatus, type BoardUs
 import {
   mergeEntries,
   newId,
+  nextEntries,
   publishEntry,
+  readBoardLog,
   readLocalLog,
   subscribeBoardLog,
   writeLocalLog,
@@ -37,6 +39,8 @@ const LOCAL_USER_KEY = "dice.localUserId.v1"
 const POST_TO_BOARD_KEY = "dice.postToBoard.v1"
 const DICE_SET_KEY = "dice.set.v1"
 const MAX_FORMULA_HISTORY = 50
+/** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
+const POLL_INTERVAL_MS = 4000
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -75,6 +79,7 @@ export const App = () => {
   const [entries, setEntries] = useState<RollEntry[]>([])
   const [formula, setFormula] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [shareError, setShareError] = useState<string | null>(null)
   const [formulaHistory, setFormulaHistory] = useState<string[]>([])
   const [personal, setPersonal] = useState<PresetBox>({ updatedAt: 0, items: [] })
   const [shared, setShared] = useState<Preset[]>([])
@@ -129,26 +134,44 @@ export const App = () => {
     }
   }, [])
 
-  // Общий журнал и общие пресеты живут в хранилище доски: onValue прилетает
-  // всем клиентам, так что лента обновляется у всей партии без своего сервера.
+  const applyBoardEntries = useCallback((boardEntries: RollEntry[]) => {
+    setEntries((prev) => {
+      const merged = nextEntries(prev, boardEntries)
+      if (merged !== prev) writeLocalLog(merged)
+
+      return merged
+    })
+  }, [])
+
+  // Общий журнал и общие пресеты живут в хранилище доски. По документации
+  // onValue прилетает всем клиентам сразу, но на живой доске чужие броски
+  // доезжали только после перезагрузки панели. Поэтому подписка осталась —
+  // когда она работает, обновление мгновенное, — но рядом с ней идёт опрос:
+  // общая история слишком важна, чтобы держаться на одном механизме.
   useEffect(() => {
     if (status !== "connected") return undefined
 
-    const stopLog = subscribeBoardLog((boardEntries) => {
-      setEntries((prev) => {
-        const merged = mergeEntries(prev, boardEntries)
-        writeLocalLog(merged)
-        return merged
-      })
-    })
+    const stopLog = subscribeBoardLog(
+      applyBoardEntries,
+      (message) => setShareError(`Журнал доски не подписался: ${message}`),
+    )
     const stopPresets = subscribeSharedPresets(setShared)
     void readSharedPresets().then(setShared)
+
+    const poll = setInterval(() => {
+      // В скрытом кадре (фоновый экземпляр приложения, свёрнутая панель)
+      // опрашивать доску незачем.
+      if (document.hidden) return
+      void readBoardLog().then(applyBoardEntries)
+      void readSharedPresets().then(setShared)
+    }, POLL_INTERVAL_MS)
 
     return () => {
       stopLog()
       stopPresets()
+      clearInterval(poll)
     }
-  }, [status])
+  }, [applyBoardEntries, status])
 
   useEffect(() => {
     if (status !== "connected" || !user) return
@@ -218,7 +241,13 @@ export const App = () => {
       rememberFormula(source)
 
       if (statusRef.current === "connected") {
-        void publishEntry(entry)
+        // Общий журнал — смысл всей панели, поэтому неудачная публикация
+        // обязана быть видна игроку, а не теряться в молчаливом ретрае.
+        void publishEntry(entry).then((published) => {
+          setShareError(
+            published ? null : "Бросок не ушёл в общий журнал — откройте диагностику и проверьте хранилище доски",
+          )
+        })
         if (postToBoardRef.current) {
           void postRollToBoard([
             `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
@@ -288,6 +317,8 @@ export const App = () => {
       />
 
       {diagnosticsOpen && <Diagnostics status={status} />}
+
+      {shareError && <div className="warning">{shareError}</div>}
 
       <RollBar
         formula={formula}
