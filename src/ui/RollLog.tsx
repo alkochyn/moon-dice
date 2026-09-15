@@ -67,7 +67,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                         onClick={() => onSave(entry)}
                         aria-label={`Сохранить ${entry.expression}`}
                       >
-                        ★ сохранить
+                        ★
                       </button>
                     </span>
                   </span>

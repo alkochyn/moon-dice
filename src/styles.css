@@ -97,11 +97,20 @@ button {
   font-size: 12px;
 }
 
-/* --- Ввод формулы --- */
+/*
+ * Поле броска — главный элемент панели, поэтому вынесено в отдельную полосу
+ * во всю ширину: своя подложка и границы сверху и снизу отделяют его от
+ * кубов и сохранённых бросков, между которыми оно зажато.
+ */
 .rollbar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  margin: 0 -10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .rollbar__row {

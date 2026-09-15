@@ -308,14 +308,22 @@ export const App = () => {
         return
       }
 
-      setScope("mine")
+      // Бросок уходит в открытую вкладку: на «Доски» — сразу всей партии.
+      if (scope === "shared" && statusRef.current !== "connected") {
+        setError("Общие броски доступны только на доске")
+        return
+      }
+
+      setError(null)
       const name = parsed.label ?? ""
-      const items = personalRef.current.items
+      const items = scope === "mine" ? personalRef.current.items : shared
       if (items.some((item) => item.formula === parsed.expression && item.name === name)) return
 
-      savePersonal([...items, makePreset(name, parsed.expression, "slate")])
+      const next = [...items, makePreset(name, parsed.expression, "slate")]
+      if (scope === "mine") savePersonal(next)
+      else saveShared(next)
     },
-    [savePersonal],
+    [savePersonal, saveShared, scope, shared],
   )
 
   /** Звёздочка на карточке броска: сохраняем его формулу вместе с названием. */
