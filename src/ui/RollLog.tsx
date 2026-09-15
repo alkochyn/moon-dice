@@ -46,27 +46,30 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                 </div>
 
                 <div className="entry__line entry__line--roll">
-                  {/* Иконки всплывают поверх формулы, перекрывая её собой. */}
+                  {/* Переброс стоит слева и виден всегда: при наведении сама
+                      формула скрывается под звёздочкой, и кликать было бы не по чему. */}
+                  <button
+                    className="entry__repeat"
+                    onClick={() => onRepeat(entry.expression)}
+                    title="Перебросить"
+                    aria-label={`Перебросить ${entry.expression}`}
+                  >
+                    ↻
+                  </button>
+
                   <span className="entry__roll">
                     <button className="entry__formula" onClick={() => onRepeat(entry.expression)} title="Перебросить">
                       {entry.expression}
                     </button>
+                    {/* Звёздочка всплывает поверх формулы, перекрывая её собой. */}
                     <span className="entry__actions">
-                      <button
-                        className="entry__action"
-                        onClick={() => onRepeat(entry.expression)}
-                        title="Перебросить"
-                        aria-label={`Перебросить ${entry.expression}`}
-                      >
-                        ↻
-                      </button>
                       <button
                         className="entry__action"
                         onClick={() => onSave(entry)}
                         title="Сохранить этот бросок"
                         aria-label={`Сохранить ${entry.expression}`}
                       >
-                        ★
+                        ★ сохранить
                       </button>
                     </span>
                   </span>

@@ -6,6 +6,7 @@
   --muted: #6b7280;
   --border: #dcdfe4;
   --accent: #4262ff;
+  --accent-soft: #e9edff;
   --accent-text: #ffffff;
   --danger: #d7373f;
   --ok: #1f9d55;
@@ -179,16 +180,31 @@ button {
   color: var(--danger);
 }
 
+/*
+ * Кубы по ширине значения, а не равными колонками: в наборе DCC пятнадцать
+ * кнопок, и растянутые на четверть панели они съедали место у журнала.
+ * Выделены оттенком акцента, чтобы ряд читался как один блок, а не как
+ * россыпь обычных кнопок.
+ */
 .dice-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .dice-grid .btn {
-  padding: 7px 0;
-  text-align: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.dice-grid .btn:hover {
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 /* --- Секции --- */
@@ -354,8 +370,11 @@ button {
   padding: 4px 6px;
 }
 
+/* Свои броски заметно жирнее: рамка рисуется внутренней тенью, чтобы
+   содержимое карточки не съезжало на пиксель. */
 .entry--mine {
   border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .entry__body {
@@ -471,19 +490,35 @@ button {
   pointer-events: none;
 }
 
-.entry:hover .entry__actions,
-.entry:focus-within .entry__actions {
+.entry__roll:hover .entry__actions,
+.entry__roll:focus-within .entry__actions {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Переброс слева от формулы, виден всегда. */
+.entry__repeat {
+  flex: none;
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.entry__repeat:hover {
+  color: var(--accent);
 }
 
 .entry__action {
   border: 0;
   background: none;
-  padding: 0 2px;
-  font-size: 15px;
+  padding: 0;
+  font-size: 12px;
   line-height: 1;
-  color: var(--muted);
+  white-space: nowrap;
+  color: var(--accent);
 }
 
 .entry__action:hover {
