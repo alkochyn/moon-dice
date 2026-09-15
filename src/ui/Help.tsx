@@ -74,9 +74,6 @@ export const Help = ({ onClose }: Props) => {
       <div className="modal__card" onClick={(event) => event.stopPropagation()} role="dialog" aria-label="Справка">
         <div className="modal__head">
           <span className="modal__title">Как кидать</span>
-          <button className="btn btn--ghost btn--icon" onClick={onClose} aria-label="Закрыть">
-            ×
-          </button>
         </div>
 
         <div className="help">
@@ -89,6 +86,17 @@ export const Help = ({ onClose }: Props) => {
             у куба до {LIMITS.maxSides}, повторов через # до {LIMITS.maxRepeat}. Кубы честные: бросок берётся из
             криптографического генератора браузера, а не из Math.random.
           </p>
+        </div>
+
+        {/*
+          Кнопка закрытия прилипла к низу окна. Крестик сверху при прокрутке
+          уезжал и оказывался ровно под крестиком самой панели Miro — промах
+          закрывал не справку, а всё приложение.
+        */}
+        <div className="modal__footer">
+          <button className="btn btn--primary modal__close" onClick={onClose}>
+            Закрыть
+          </button>
         </div>
       </div>
     </div>

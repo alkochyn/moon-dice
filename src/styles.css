@@ -956,10 +956,33 @@ button {
   color: var(--muted);
 }
 
+/* Липкий низ окна: до кнопки закрытия не надо долистывать. */
+.modal__footer {
+  position: sticky;
+  bottom: -12px;
+  margin: 4px -12px -12px;
+  padding: 8px 12px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.modal__close {
+  width: 100%;
+}
+
+/* Тот же приём в настройках: их кнопки тоже не должны уезжать при прокрутке,
+   иначе единственным способом закрыть окно остаётся крестик наверху, а он
+   стоит впритык к крестику самой панели Miro. */
 .modal__actions {
+  position: sticky;
+  bottom: -12px;
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+  margin: 4px -12px -12px;
+  padding: 8px 12px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
 }
 
 /* --- Справка --- */
