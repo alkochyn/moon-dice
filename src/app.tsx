@@ -270,6 +270,12 @@ export const App = () => {
     setPresetDraft({ name: "", formula: formula.trim(), color: "slate" })
   }, [formula])
 
+  /** Звёздочка на карточке броска: сохраняем его формулу вместе с названием. */
+  const savePresetFromEntry = useCallback((entry: RollEntry) => {
+    setScope("mine")
+    setPresetDraft({ name: entry.label ?? "", formula: entry.expression, color: "slate" })
+  }, [])
+
   const editPreset = useCallback((preset: Preset) => {
     setPresetDraft({ id: preset.id, name: preset.name, formula: preset.formula, color: preset.color })
   }, [])
@@ -377,6 +383,7 @@ export const App = () => {
           setFormula(value)
           roll(value)
         }}
+        onSave={savePresetFromEntry}
       />
 
       <label className="checkbox">

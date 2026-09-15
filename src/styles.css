@@ -339,12 +339,14 @@ button {
 }
 
 /*
- * Запись журнала — ровно две строки: шапка с результатом и расклад под ней.
- * Ничего не переносится: при нехватке ширины сжимаются имя и название броска,
- * а результат и кнопка переброса остаются на месте. Так на экран влезает
- * заметно больше бросков, а глаз цепляется за число в рамке.
+ * Карточка броска: слева подпись и расклад, справа результат во всю высоту.
+ * Крупное число у правого края — то, ради чего в журнал и смотрят, поэтому
+ * оно всегда на одном месте и не зависит от длины имени и формулы.
  */
 .entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -355,10 +357,16 @@ button {
   border-color: var(--accent);
 }
 
+.entry__body {
+  flex: 1;
+  min-width: 0;
+}
+
 .entry__line {
   display: flex;
   align-items: center;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 4px 6px;
   min-width: 0;
   font-size: 14px;
 }
@@ -380,46 +388,49 @@ button {
   user-select: none;
 }
 
-.entry__user,
-.entry__label,
-.entry__formula {
+.entry__user {
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/*
- * Ширины на всех не хватает, поэтому уступают по очереди: первой ужимается
- * формула (её видно и в раскладе снизу), затем имя — игрока всё равно выдаёт
- * аватарка, — и последним название броска, ради которого строка и затевалась.
- */
-.entry__formula {
-  flex: 0 4 auto;
-}
-
-.entry__user {
-  flex: 0 2 auto;
   font-weight: 600;
   color: var(--text);
 }
 
-/* Название сохранённого броска: ради него партия и понимает, что кинули. */
+/*
+ * Название сохранённого броска — ради него партия и понимает, что кинули,
+ * поэтому длинное имя переносится на вторую строку, а не обрезается.
+ */
 .entry__label {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
-/* Формула — она же кнопка переброса. */
+/* Формула — она же кнопка переброса, рядом с ней всплывают действия. */
+.entry__roll {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
 .entry__formula {
   border: 0;
   background: none;
   padding: 0;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .entry__formula:hover {
@@ -427,22 +438,30 @@ button {
   text-decoration-style: solid;
 }
 
-.entry__totals {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
+/* Место под иконки держим всегда: иначе карточка дёргается при наведении. */
+.entry__actions {
+  display: inline-flex;
+  gap: 2px;
   flex: none;
+  visibility: hidden;
 }
 
-.entry__total {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.25;
-  font-variant-numeric: tabular-nums;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  padding: 0 7px;
+.entry:hover .entry__actions,
+.entry:focus-within .entry__actions {
+  visibility: visible;
+}
+
+.entry__action {
+  border: 0;
+  background: none;
+  padding: 0 3px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.entry__action:hover {
+  color: var(--accent);
 }
 
 .entry__detail {
@@ -453,6 +472,37 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.entry__totals {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+  align-self: stretch;
+  justify-content: center;
+}
+
+.entry__total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  flex: 1;
+}
+
+/* Повторные броски: несколько чисел столбиком, каждое поменьше. */
+.entry__totals--many .entry__total {
+  font-size: 15px;
+  min-width: 40px;
 }
 
 /* --- История формул --- */
