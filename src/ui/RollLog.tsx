@@ -19,32 +19,39 @@ export const RollLog = ({ entries, currentUserId, onRepeat }: Props) => (
       <div className="empty">Бросков ещё не было.</div>
     ) : (
       <div className="log">
-        {entries.map((entry) => (
-          <article key={entry.id} className={`entry${entry.userId === currentUserId ? " entry--mine" : ""}`}>
-            <header className="entry__head">
-              <Avatar name={entry.userName} userId={entry.userId} />
-              <span className="entry__user">{entry.userName}</span>
-              <span className="entry__time">{time(entry.ts)}</span>
-            </header>
+        {entries.map((entry) => {
+          // Расклад всех повторов в одну строку: `3#1d20` даёт три результата,
+          // но запись всё равно обязана остаться двухстрочной.
+          const detail = entry.results.map((result) => result.detail).join(" · ")
 
-            {entry.label && <div className="entry__label">{entry.label}</div>}
-
-            {entry.results.map((result, index) => (
-              <div key={index} className="entry__result">
-                <span className="entry__total">{result.total}</span>
-                <span className="entry__detail">{result.detail}</span>
-              </div>
-            ))}
-
-            <button
-              className="entry__formula btn btn--ghost"
-              onClick={() => onRepeat(entry.expression)}
-              title="Повторить бросок"
+          return (
+            <article
+              key={entry.id}
+              className={`entry${entry.userId === currentUserId ? " entry--mine" : ""}`}
+              title={`${entry.userName}, ${time(entry.ts)}`}
             >
-              ↻ {entry.expression}
-            </button>
-          </article>
-        ))}
+              <div className="entry__line">
+                <Avatar name={entry.userName} userId={entry.userId} />
+                <span className="entry__user">{entry.userName}</span>
+                {entry.label && <span className="entry__label">{entry.label}</span>}
+                <button className="entry__formula" onClick={() => onRepeat(entry.expression)} title="Перебросить">
+                  {entry.expression}
+                </button>
+                <span className="entry__totals">
+                  {entry.results.map((result, index) => (
+                    <span key={index} className="entry__total">
+                      {result.total}
+                    </span>
+                  ))}
+                </span>
+              </div>
+
+              <div className="entry__detail" title={detail}>
+                {detail}
+              </div>
+            </article>
+          )
+        })}
       </div>
     )}
   </section>

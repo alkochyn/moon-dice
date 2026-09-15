@@ -321,38 +321,44 @@ button {
 .log {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
   overflow-anchor: none;
 }
 
+/*
+ * Запись журнала — ровно две строки: шапка с результатом и расклад под ней.
+ * Ничего не переносится: при нехватке ширины сжимаются имя и название броска,
+ * а результат и кнопка переброса остаются на месте. Так на экран влезает
+ * заметно больше бросков, а глаз цепляется за число в рамке.
+ */
 .entry {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 6px 8px;
+  padding: 4px 6px;
 }
 
 .entry--mine {
   border-color: var(--accent);
 }
 
-.entry__head {
+.entry__line {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
+  gap: 5px;
+  min-width: 0;
+  font-size: 14px;
 }
 
 /* Аватарка рисуется из инициалов и цвета по id: Miro картинок не отдаёт,
    а внешних запросов панель не делает принципиально. */
 .avatar {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -364,53 +370,79 @@ button {
   user-select: none;
 }
 
-.entry__user {
-  font-weight: 600;
-  color: var(--text);
+.entry__user,
+.entry__label,
+.entry__formula {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Название сохранённого броска — подпись, ради которой партия и понимает,
-   что именно кинули. */
-.entry__label {
-  font-weight: 500;
-  margin-top: 1px;
-  word-break: break-word;
+/*
+ * Ширины на всех не хватает, поэтому уступают по очереди: первой ужимается
+ * формула (её видно и в раскладе снизу), затем имя — игрока всё равно выдаёт
+ * аватарка, — и последним название броска, ради которого строка и затевалась.
+ */
+.entry__formula {
+  flex: 0 4 auto;
 }
 
-.entry__time {
-  margin-left: auto;
+.entry__user {
+  flex: 0 2 auto;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Название сохранённого броска: ради него партия и понимает, что кинули. */
+.entry__label {
+  flex: 0 1 auto;
+  color: var(--muted);
+}
+
+/* Формула — она же кнопка переброса. */
+.entry__formula {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.entry__formula:hover {
+  color: var(--accent);
+  text-decoration-style: solid;
+}
+
+.entry__totals {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
   flex: none;
 }
 
-.entry__result {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 2px;
-}
-
 .entry__total {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 0 7px;
 }
 
 .entry__detail {
+  margin-top: 1px;
   color: var(--muted);
-  font-size: 12px;
-  word-break: break-word;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
-}
-
-.entry__formula {
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --- История формул --- */
