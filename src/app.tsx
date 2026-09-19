@@ -33,6 +33,7 @@ import {
 import { postRollToBoard, STICKY_PALETTE, type Sticker } from "./board/post"
 import { publishProfile } from "./board/players"
 import { rollInitiative, type Combatant } from "./combat/initiative"
+import { readGlobal, readScoped, resolveScope, writeGlobal, writeScoped } from "./board/scope"
 import { StatusBar } from "./ui/StatusBar"
 import { DiceBar } from "./ui/DiceBar"
 import { PlayerBar } from "./ui/PlayerBar"
@@ -62,22 +63,12 @@ const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
 const POLL_INTERVAL_MS = 4000
 
-function readJson<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-const writeJson = (key: string, value: unknown): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Хранилище может быть недоступно — работаем из памяти.
-  }
-}
+/**
+ * Сведение истории формул на момент, когда доска наконец назвалась: то, что
+ * игрок успел набрать до этого, остаётся сверху.
+ */
+const mergeFormulas = (fresh: string[], stored: string[]): string[] =>
+  [...fresh, ...stored.filter((item) => !fresh.includes(item))].slice(0, MAX_FORMULA_HISTORY)
 
 /**
  * Язык читаем сразу, ещё до первой отрисовки, иначе панель мигнула бы чужим
@@ -85,14 +76,14 @@ const writeJson = (key: string, value: unknown): void => {
  * так и остаётся на русском, остальные получают английский.
  */
 const initialLang = (): Lang => {
-  const saved = readJson<unknown>(LANG_KEY, null)
+  const saved = readGlobal<unknown>(LANG_KEY, null)
   if (isLang(saved)) return saved
   return navigator.language?.toLowerCase().startsWith("ru") ? "ru" : DEFAULT_LANG
 }
 
 /** Облик тоже читаем до первой отрисовки: иначе терминал мигал бы обычной панелью. */
 const initialSkin = (): Skin => {
-  const saved = readJson<unknown>(SKIN_KEY, DEFAULT_SKIN)
+  const saved = readGlobal<unknown>(SKIN_KEY, DEFAULT_SKIN)
   return isSkin(saved) ? saved : DEFAULT_SKIN
 }
 
@@ -139,10 +130,12 @@ export const App = () => {
 
   const changePanel = useCallback((next: Panel) => {
     setPanel(next)
-    writeJson(PANEL_KEY, next)
+    writeGlobal(PANEL_KEY, next)
     // Правка чипа живёт в окошке у чипа; уходя с вкладки, закрываем её.
     setPresetDraft(null)
   }, [])
+  /** Пространство доски поднято: локальную копию можно читать и писать. */
+  const [scoped, setScoped] = useState(false)
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
@@ -169,26 +162,52 @@ export const App = () => {
     document.documentElement.lang = lang
   }, [lang])
 
-  // Локальное состояние поднимаем сразу: панель обязана быть рабочей ещё до
-  // того, как выяснится, доехал ли SDK.
+  // Привычки игрока одни на все доски, поэтому поднимаются сразу: панель
+  // обязана быть рабочей ещё до того, как выяснится, доехал ли SDK.
   useEffect(() => {
     anonId.current = localUserId()
-    setEntries(readLocalLog())
-    setFormulaHistory(readJson<string[]>(FORMULA_HISTORY_KEY, []))
-    setPostToBoard(readJson<boolean>(POST_TO_BOARD_KEY, false))
-    setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
-    setDiceCollapsed(readJson<boolean>(DICE_COLLAPSED_KEY, false))
-    const savedPanel = readJson<unknown>(PANEL_KEY, "dice")
+    setPostToBoard(readGlobal<boolean>(POST_TO_BOARD_KEY, false))
+    setDiceSet(readGlobal<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
+    setDiceCollapsed(readGlobal<boolean>(DICE_COLLAPSED_KEY, false))
+    const savedPanel = readGlobal<unknown>(PANEL_KEY, "dice")
     if (savedPanel === "dice" || savedPanel === "mine" || savedPanel === "shared" || savedPanel === "combat") {
       setPanel(savedPanel)
     }
-    setCharacter(readJson<string>(CHARACTER_KEY, ""))
-    setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
-    setInitiative(readJson<string>(INITIATIVE_KEY, ""))
-
-    const local = readLocalPresets(tRef.current.defaultPresets)
-    setPersonal({ updatedAt: local.updatedAt, items: local.items })
+    setLook(readGlobal<{ icon?: string; color?: string }>(LOOK_KEY, {}))
   }, [])
+
+  /**
+   * Журнал, сохранённые броски и имя персонажа принадлежат доске, а
+   * localStorage — общий на все доски сразу. Поэтому сначала выясняем, на какой
+   * мы доске, и только потом читаем локальную копию: иначе партия видела бы
+   * историю соседней доски, в том числе чужой команды, а игрок ходил бы по
+   * всем играм под одним именем.
+   */
+  useEffect(() => {
+    if (scoped || status === "loading") return undefined
+    let alive = true
+
+    void resolveScope().then((ready) => {
+      if (!alive || !ready) return
+
+      // Журнал доски мог приехать раньше нас — не затираем его, а сводим.
+      setEntries((prev) => nextEntries(prev, readLocalLog()))
+      setFormulaHistory((prev) => mergeFormulas(prev, readScoped<string[]>(FORMULA_HISTORY_KEY, [])))
+
+      const local = readLocalPresets(tRef.current.defaultPresets)
+      setPersonal((prev) =>
+        prev.updatedAt > local.updatedAt ? prev : { updatedAt: local.updatedAt, items: local.items },
+      )
+      // Если игрок успел переименоваться до ответа доски, его правка важнее.
+      setCharacter((prev) => prev || readScoped<string>(CHARACTER_KEY, ""))
+      setInitiative((prev) => prev || readScoped<string>(INITIATIVE_KEY, ""))
+      setScoped(true)
+    })
+
+    return () => {
+      alive = false
+    }
+  }, [scoped, status])
 
   useEffect(() => {
     let alive = true
@@ -252,10 +271,12 @@ export const App = () => {
     }
   }, [applyBoardEntries, status])
 
+  // Строго после подъёма пространства: иначе на доску уехал бы пустой набор,
+  // а с доски приехавший тут же затёрся бы локальной копией.
   useEffect(() => {
-    if (status !== "connected" || !user) return
+    if (!scoped || status !== "connected" || !user) return
     void syncPersonalPresets(user.id, personalRef.current).then(setPersonal)
-  }, [status, user])
+  }, [scoped, status, user])
 
   // Карточка игрока на доске — по ней мастер кидает инициативу за всех.
   // Пишем при входе и после каждой правки настроек; ключ у игрока свой.
@@ -289,7 +310,7 @@ export const App = () => {
   const rememberFormula = useCallback((value: string) => {
     setFormulaHistory((prev) => {
       const next = [value, ...prev.filter((item) => item !== value)].slice(0, MAX_FORMULA_HISTORY)
-      writeJson(FORMULA_HISTORY_KEY, next)
+      writeScoped(FORMULA_HISTORY_KEY, next)
       return next
     })
   }, [])
@@ -406,8 +427,7 @@ export const App = () => {
   )
 
   /** Собирает строку формы из сохранённого броска: формула плюс метка. */
-  const toSource = (expression: string, label?: string): string =>
-    label ? `${expression} : ${label}` : expression
+  const toSource = (expression: string, label?: string): string => (label ? `${expression} : ${label}` : expression)
 
   /**
    * Звёздочка сохраняет сразу, без формы: цвет и название можно поправить
@@ -499,13 +519,13 @@ export const App = () => {
 
   const savePlayerLook = useCallback((next: PlayerLook) => {
     setCharacter(next.character)
-    writeJson(CHARACTER_KEY, next.character)
+    writeScoped(CHARACTER_KEY, next.character)
     setInitiative(next.initiative)
-    writeJson(INITIATIVE_KEY, next.initiative)
+    writeScoped(INITIATIVE_KEY, next.initiative)
 
     const appearance = { icon: next.icon, color: next.color }
     setLook(appearance)
-    writeJson(LOOK_KEY, appearance)
+    writeGlobal(LOOK_KEY, appearance)
   }, [])
 
   const reorderPreset = useCallback(
@@ -518,12 +538,12 @@ export const App = () => {
 
   const changeDiceSet = useCallback((id: string) => {
     setDiceSet(id)
-    writeJson(DICE_SET_KEY, id)
+    writeGlobal(DICE_SET_KEY, id)
   }, [])
 
   const changeLang = useCallback((next: Lang) => {
     setLang(next)
-    writeJson(LANG_KEY, next)
+    writeGlobal(LANG_KEY, next)
     // Нетронутый стартовый набор нигде не записан — переводим и его, иначе
     // после смены языка в панели остались бы подписи на прежнем.
     setPersonal((box) => (box.updatedAt === 0 ? { ...box, items: defaultPresets(STRINGS[next].defaultPresets) } : box))
@@ -531,19 +551,19 @@ export const App = () => {
 
   const changeSkin = useCallback((next: Skin) => {
     setSkin(next)
-    writeJson(SKIN_KEY, next)
+    writeGlobal(SKIN_KEY, next)
   }, [])
 
   const toggleDiceCollapsed = useCallback(() => {
     setDiceCollapsed((collapsed) => {
-      writeJson(DICE_COLLAPSED_KEY, !collapsed)
+      writeGlobal(DICE_COLLAPSED_KEY, !collapsed)
       return !collapsed
     })
   }, [])
 
   const togglePostToBoard = useCallback((next: boolean) => {
     setPostToBoard(next)
-    writeJson(POST_TO_BOARD_KEY, next)
+    writeGlobal(POST_TO_BOARD_KEY, next)
   }, [])
 
   const playerName = character || user?.name || t.player.fallbackName
@@ -566,7 +586,11 @@ export const App = () => {
 
   const combat = (
     <Combat
-      connected={status === "connected"}
+      // Состояние боя читается из копии доски при монтировании, а доска
+      // называется не сразу: как назвалась — перечитываем. До этого к доске
+      // не ходим, иначе запоздалый ответ записал бы неполный состав поверх.
+      key={scoped ? "board" : "pending"}
+      connected={status === "connected" && scoped}
       selfId={playerId}
       onRoll={rollCombat}
     />

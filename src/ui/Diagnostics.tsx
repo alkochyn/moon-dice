@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks"
 import { getMiro, isInsideMiro, isPanelMode, probeUser, type BoardStatus } from "../board/sdk"
 import { probeBoardStorage } from "../board/storage"
 import { countLiveUpdates, describeBoardLog } from "../board/log"
+import { describeScope } from "../board/scope"
 import { useT, type Strings } from "../i18n"
 
 /**
@@ -85,6 +86,7 @@ export const Diagnostics = ({ status }: Props) => {
     [d.boardLog, boardLog],
     [d.liveUpdates, live ? d.liveValue(live) : d.liveNone],
     [d.browserStorage, localStorageState(d)],
+    [d.scope, describeScope(d)],
     [d.cookies, navigator.cookieEnabled ? d.cookiesOn : d.cookiesOff],
     [d.offlineCache, swState(d)],
     [d.browser, navigator.userAgent],

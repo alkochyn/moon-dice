@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 
 import { readOnlineUsers, readProfile } from "../board/players"
 import { newId } from "../board/log"
+import { readScoped, writeScoped } from "../board/scope"
 import { DEFAULT_INITIATIVE, expandMonster, type Combatant } from "../combat/initiative"
 import { DiceError, parseFormula, validateFormula } from "../dice"
 import { describeDiceError, useT } from "../i18n"
 import { Avatar } from "./Avatar"
 import { HelpIcon, SwordsIcon } from "./icons"
 
+/** Всё, что мастер помнит о бою, принадлежит доске: на другой доске другая партия. */
 const MONSTERS_KEY = "dice.combat.monsters.v1"
 /** Формулы, вписанные мастером игрокам, и галочки участия — по userId. */
 const OVERRIDES_KEY = "dice.combat.overrides.v1"
@@ -47,31 +49,17 @@ interface Props {
 }
 
 const readMonsters = (): MonsterItem[] => {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(MONSTERS_KEY) ?? "[]")
-    return Array.isArray(parsed) ? (parsed as MonsterItem[]).filter((item) => typeof item?.source === "string") : []
-  } catch {
-    return []
-  }
+  const parsed = readScoped<unknown>(MONSTERS_KEY, [])
+  return Array.isArray(parsed) ? (parsed as MonsterItem[]).filter((item) => typeof item?.source === "string") : []
 }
 
-const writeStored = (key: string, value: unknown): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Значение останется в памяти до конца сессии.
-  }
-}
+const writeStored = writeScoped
 
 /** Словарь по userId; всё, что не проходит проверку, молча отбрасываем. */
 const readRecord = <T,>(key: string, valid: (value: unknown) => boolean): Record<string, T> => {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "{}")
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
-    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => valid(value))) as Record<string, T>
-  } catch {
-    return {}
-  }
+  const parsed = readScoped<unknown>(key, {})
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
+  return Object.fromEntries(Object.entries(parsed).filter(([, value]) => valid(value))) as Record<string, T>
 }
 
 const isString = (value: unknown): boolean => typeof value === "string"
