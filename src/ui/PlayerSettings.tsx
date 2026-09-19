@@ -123,6 +123,7 @@ export const PlayerSettings = ({
             onKeyDown={(event) => event.key === "Enter" && save()}
           />
         </label>
+        <p className="modal__hint">{t.settings.characterScopeHint}</p>
 
         <label className="modal__field">
           {t.settings.initiative}

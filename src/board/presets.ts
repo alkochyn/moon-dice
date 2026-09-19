@@ -1,3 +1,4 @@
+import { readScoped, writeScoped } from "./scope"
 import { readKey, subscribeKey, updateKey } from "./storage"
 import { newId } from "./log"
 import type { Strings } from "../i18n/strings"
@@ -67,25 +68,22 @@ export const reorderPresets = (items: Preset[], sourceId: string, index: number)
   return [...rest.slice(0, to), items[from] as Preset, ...rest.slice(to)]
 }
 
+/**
+ * Личные броски тоже разведены по доскам: один и тот же localStorage обслуживает
+ * панель на всех досках сразу, и без пространства набор бросков одной партии
+ * подменял набор другой — а потом уезжал в хранилище чужой доски синхронизацией.
+ */
 export const readLocalPresets = (
   names: Strings["defaultPresets"],
 ): { items: Preset[]; updatedAt: number; firstRun: boolean } => {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY)
-    if (!raw) return { items: defaultPresets(names), updatedAt: 0, firstRun: true }
-    const parsed = JSON.parse(raw) as PresetBox
-    return { items: sanitize(parsed.items), updatedAt: parsed.updatedAt ?? 0, firstRun: false }
-  } catch {
-    return { items: defaultPresets(names), updatedAt: 0, firstRun: true }
-  }
+  const parsed = readScoped<PresetBox | null>(LOCAL_KEY, null)
+  if (!parsed) return { items: defaultPresets(names), updatedAt: 0, firstRun: true }
+
+  return { items: sanitize(parsed.items), updatedAt: parsed.updatedAt ?? 0, firstRun: false }
 }
 
 export const writeLocalPresets = (box: PresetBox): void => {
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(box))
-  } catch {
-    // Не смертельно: пресеты останутся в памяти до конца сессии.
-  }
+  writeScoped(LOCAL_KEY, box)
 }
 
 /**
