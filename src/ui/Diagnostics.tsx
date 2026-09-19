@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks"
 import { getMiro, isInsideMiro, isPanelMode, probeUser, type BoardStatus } from "../board/sdk"
 import { probeBoardStorage } from "../board/storage"
 import { countLiveUpdates, describeBoardLog } from "../board/log"
+import { describeScope } from "../board/scope"
 
 /**
  * Экран для разбора полётов: игрок открывает, жмёт «скопировать» и присылает
@@ -80,6 +81,7 @@ export const Diagnostics = ({ status }: Props) => {
     ["Журнал на доске", boardLog],
     ["Живые обновления", live ? `${live} получено подпиской` : "подпиской не приходили, журнал едет опросом"],
     ["Хранилище браузера", localStorageState()],
+    ["Пространство копии", describeScope()],
     ["Куки", navigator.cookieEnabled ? "разрешены" : "заблокированы для стороннего кадра"],
     ["Офлайн-кэш", swState()],
     ["Браузер", navigator.userAgent],
