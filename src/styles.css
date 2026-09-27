@@ -226,20 +226,71 @@ button {
   gap: 4px;
 }
 
-.dice-grid .btn {
-  padding: 4px 9px;
-  border-radius: 999px;
-  border-color: transparent;
-  background: var(--accent-soft);
-  color: var(--accent);
+/*
+ * Кубы — объёмные клавиши в приглушённом цвете своего куба (оттенок --h
+ * приходит из DiceBar). Нижняя кромка и проседание при нажатии дают понять,
+ * что кнопку жмут, а не читают.
+ */
+.die {
+  --h: 230;
+  --die-top: hsl(var(--h) 45% 96%);
+  --die-bottom: hsl(var(--h) 38% 91%);
+  --die-edge: hsl(var(--h) 26% 76%);
+  --die-lip: hsl(var(--h) 26% 66%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px 4px 5px;
+  border: 1px solid var(--die-edge);
+  border-bottom: 3px solid var(--die-lip);
+  border-radius: var(--radius);
+  background: linear-gradient(to bottom, var(--die-top), var(--die-bottom));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 1px 1px rgb(0 0 0 / 6%);
+  color: hsl(var(--h) 38% 30%);
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.dice-grid .btn:hover {
-  background: var(--accent);
-  color: var(--accent-text);
+/* Наведение как у сохранённых бросков: заливка густеет в том же цвете,
+   без затемнения и без чужого акцентного синего. */
+.die:hover {
+  --die-top: hsl(var(--h) 55% 94%);
+  --die-bottom: hsl(var(--h) 48% 87%);
+  --die-edge: hsl(var(--h) 32% 70%);
+}
+
+.die:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+  margin-bottom: 2px;
+}
+
+.die-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.die-icon--wide {
+  width: 19px;
+}
+
+/* Задний куб пары прячется за передним: контур переднего залит цветом кнопки. */
+.die-icon__back {
+  fill: var(--die-bottom);
+}
+
+.die:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* --- Секции --- */
@@ -318,13 +369,16 @@ button {
  * панель, и в строку помещался один бросок вместо двух.
  */
 .preset {
+  /* Цвет броска красит весь чип лёгкой заливкой и рамкой вместо полоски
+     слева: так чипы читаются цветными плашками, а не карточками с меткой. */
+  --preset-bg: color-mix(in srgb, var(--chip) 8%, var(--bg));
+  --preset-bg-hover: color-mix(in srgb, var(--chip) 15%, var(--bg));
   position: relative;
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--chip);
+  border: 1px solid color-mix(in srgb, var(--chip) 30%, var(--bg));
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--preset-bg);
   /*
    * Нижний предел ширины держит карандаш и крестик: они всплывают оверлеем
    * у правого края, и на коротком чипе вроде «1d6» накрывали его целиком —
@@ -405,8 +459,9 @@ button {
   font-size: 15px;
 }
 
-.preset:hover {
-  background: var(--surface-2);
+.preset:hover,
+.preset:focus-within {
+  background: var(--preset-bg-hover);
 }
 
 .preset__name {
@@ -446,7 +501,7 @@ button {
   align-items: center;
   gap: 2px;
   padding: 0 4px 0 10px;
-  background: linear-gradient(to right, transparent, var(--surface-2) 12px);
+  background: linear-gradient(to right, transparent, var(--preset-bg-hover) 12px);
   border-radius: 0 var(--radius) var(--radius) 0;
   opacity: 0;
   pointer-events: none;
@@ -479,6 +534,13 @@ button {
   color: var(--accent);
 }
 
+/* На самом чипе подсветка значка в его цвете: голубое пятно на зелёном или
+   красном чипе выглядело заплаткой. */
+.preset .preset__action:hover {
+  background: color-mix(in srgb, var(--chip) 22%, var(--bg));
+  color: color-mix(in srgb, var(--chip) 75%, var(--text));
+}
+
 .preset__formula {
   max-width: 100%;
   overflow: hidden;
@@ -487,6 +549,7 @@ button {
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--chip) 65%, var(--text));
 }
 
 .colors {

@@ -1,4 +1,6 @@
+import type { JSX } from "preact"
 import { DICE_SETS, findDiceSet } from "../data/diceSets"
+import { DieIcon, dieSides } from "./DieIcon"
 
 interface Props {
   diceSet: string
@@ -64,7 +66,14 @@ export const DiceBar = ({
       {!collapsed && (
         <div className="dice-grid">
           {dice.map((item) => (
-            <button key={item} className="btn" onClick={() => onRoll(item)} title={`Бросить ${item}`}>
+            <button
+              key={item}
+              className="die"
+              style={dieStyle(item)}
+              onClick={() => onRoll(item)}
+              title={`Бросить ${item}`}
+            >
+              <DieIcon die={item} />
               {item}
             </button>
           ))}
@@ -72,4 +81,17 @@ export const DiceBar = ({
       )}
     </div>
   )
+}
+
+/*
+ * У каждого куба свой оттенок по числу граней: от красного у d2 до фиолетового
+ * у d100, по логарифмической шкале, иначе мелкие кубы слиплись бы в один цвет.
+ * Оттенок привязан к кубу, а не к месту в наборе: d20 синий и в basic, и в DCC,
+ * и глаз со временем находит куб по цвету, не читая надпись.
+ */
+function dieStyle(die: string): JSX.CSSProperties | undefined {
+  const sides = dieSides(die)
+  if (!sides || sides < 2) return undefined
+  const hue = Math.round((Math.log(sides / 2) / Math.log(50)) * 285)
+  return { "--h": hue } as JSX.CSSProperties
 }
