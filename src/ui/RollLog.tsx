@@ -14,6 +14,15 @@ const time = (ts: number): string => new Date(ts).toLocaleTimeString("ru-RU", { 
 
 const fullTime = (ts: number): string => new Date(ts).toLocaleString("ru-RU")
 
+/* Расклад под суммой, если он что-то добавляет: у одного куба без
+   модификаторов он повторял бы сумму — «7» и «[7]». */
+const Detail = ({ result }: { result: { total: number; detail: string } }) =>
+  result.detail === String(result.total) || result.detail === `[${result.total}]` ? null : (
+    <span className="entry__tile-detail" title={result.detail}>
+      {result.detail}
+    </span>
+  )
+
 export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => (
   <section className="section section--log">
     <div className="section__head">
@@ -25,14 +34,15 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
     ) : (
       <div className="log">
         {entries.map((entry) => {
-          // Расклад всех повторов в одну строку: `3#1d20` даёт три результата,
-          // но лишней строки в карточке от этого не появляется.
-          const detail = entry.results.map((result) => result.detail).join(" · ")
+          // `6#3d6` — это шесть отдельных бросков, и каждый показывается своей
+          // плиткой: сумма крупно, расклад под ней. Одной строкой с колонкой
+          // сумм сбоку было не понять, какой расклад к какой сумме относится.
+          const repeated = entry.results.length > 1
 
           return (
             <article
               key={entry.id}
-              className={`entry${entry.userId === currentUserId ? " entry--mine" : ""}`}
+              className={`entry${repeated ? " entry--repeated" : ""}${entry.userId === currentUserId ? " entry--mine" : ""}`}
             >
               <div className="entry__body">
                 <div className="entry__line">
@@ -43,53 +53,61 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                     {...(entry.color ? { color: entry.color } : {})}
                   />
                   <span className="entry__user">{entry.userName}</span>
-                  {entry.label && <span className="entry__label">{entry.label}</span>}
-                </div>
 
-                <div className="entry__line entry__line--roll">
-                  {/* Переброс стоит слева и виден всегда: при наведении сама
-                      формула скрывается под звёздочкой, и кликать было бы не по чему. */}
-                  <button
-                    className="entry__repeat"
-                    onClick={() => onRepeat(entry)}
-                    aria-label={`Перебросить ${entry.expression}`}
-                  >
-                    <RepeatIcon />
-                  </button>
-
+                  {/* Кто, что и зачем кинул — одной строкой; расклад уходит ниже.
+                      Переброс и звёздочка всплывают поверх формулы при наведении. */}
                   <span className="entry__roll">
                     <button className="entry__formula" onClick={() => onRepeat(entry)}>
                       {entry.expression}
                     </button>
-                    {/* Звёздочка всплывает поверх формулы, перекрывая её собой. */}
                     <span className="entry__actions">
+                      <button
+                        className="entry__action"
+                        onClick={() => onRepeat(entry)}
+                        aria-label={`Перебросить ${entry.expression}`}
+                        title="Перебросить"
+                      >
+                        <RepeatIcon />
+                      </button>
                       <button
                         className="entry__action"
                         onClick={() => onSave(entry)}
                         aria-label={`Сохранить ${entry.expression}`}
+                        title="Сохранить"
                       >
                         <StarIcon />
                       </button>
                     </span>
                   </span>
 
-                  <span className="entry__arrow">→</span>
-                  <span className="entry__detail" title={detail}>
-                    {detail}
-                  </span>
+                  {entry.label && <span className="entry__label">{entry.label}</span>}
                 </div>
-              </div>
 
-              <span className={`entry__totals${entry.results.length > 1 ? " entry__totals--many" : ""}`}>
-                {entry.results.map((result, index) => (
-                  <span key={index} className="entry__total">
-                    {result.total}
-                  </span>
-                ))}
+                {repeated && (
+                  <div className="entry__tiles">
+                    {entry.results.map((result, index) => (
+                      <div key={index} className="entry__tile">
+                        <span className="entry__tile-total">{result.total}</span>
+                        <Detail result={result} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Время у всех карточек в левом нижнем углу, под броском. */}
                 <span className="entry__time" title={fullTime(entry.ts)}>
                   {time(entry.ts)}
                 </span>
-              </span>
+              </div>
+
+              {/* Одиночный бросок — та же плитка, что у повторных, только справа
+                  во всю высоту карточки: сумма крупно, расклад под ней. */}
+              {!repeated && entry.results[0] && (
+                <span className="entry__total">
+                  <span className="entry__total-value">{entry.results[0].total}</span>
+                  <Detail result={entry.results[0]} />
+                </span>
+              )}
             </article>
           )
         })}

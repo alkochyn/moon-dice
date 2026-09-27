@@ -662,14 +662,6 @@ button {
   font-size: 14px;
 }
 
-/* Когда расклад занимает две строки, формула и кнопки встают по центру
-   относительно него, а не прижимаются к первой строке. */
-.entry__line--roll {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 5px;
-}
-
 /* Аватарка рисуется из инициалов и цвета по id: Miro картинок не отдаёт,
    а внешних запросов панель не делает принципиально. */
 .avatar {
@@ -724,7 +716,9 @@ button {
   align-items: center;
   flex: none;
   max-width: 100%;
-  min-width: 0;
+  /* Накладка с перебросом и звёздочкой шире короткой формулы вроде «d6»:
+     без запаса она залезала на комментарий к броску. */
+  min-width: 44px;
 }
 
 .entry__formula {
@@ -773,28 +767,9 @@ button {
   pointer-events: auto;
 }
 
-/* Переброс слева от формулы, виден всегда. */
-/* Высота у переброса и накладки со звездой одна и та же — высота строки с
-   формулой. Иначе центры иконок расходятся на пару пикселей. */
-.entry__repeat {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  height: 21px;
-  border: 0;
-  background: none;
-  padding: 0 2px;
-  color: var(--muted);
-}
-
-.entry__repeat .icon,
 .entry__actions .icon {
   width: 14px;
   height: 14px;
-}
-
-.entry__repeat:hover {
-  color: var(--accent);
 }
 
 .entry__action {
@@ -810,70 +785,94 @@ button {
   color: var(--accent);
 }
 
-/* Тон между рамкой и текстом: на сером фоне карточки цвет рамки не читался,
-   а цвет текста сделал бы стрелку равной по весу самому раскладу. */
-.entry__arrow {
-  flex: none;
-  color: #9aa1ad;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 /*
- * Расклад может занять вторую строку, но не больше: горсть кубов вроде 20d20
- * иначе растянула бы карточку на пол-журнала. Что не влезло и во вторую —
- * обрезается, полный расклад показывается подсказкой.
+ * Сумма одиночного броска — плитка справа во всю высоту карточки, как у
+ * повторных, только крупнее: сумма, под ней расклад. Длинный расклад вроде
+ * 8d6+2d4 переносится на вторую строку, дальше обрезается — полный виден
+ * подсказкой. Рамка не шире трети карточки, чтобы не зажимать имя и формулу.
  */
-.entry__detail {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-}
-
-.entry__totals {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1px;
-  flex: none;
-  align-self: stretch;
-  justify-content: center;
-}
-
 .entry__total {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 46px;
-  padding: 0 6px;
+  flex: 0 1 auto;
+  align-self: stretch;
+  min-width: 54px;
+  max-width: 38%;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.entry__total-value {
   font-size: 22px;
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
+}
+
+.entry__total .entry__tile-detail {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+/*
+ * Повторный бросок (`6#3d6`) раскладывается плитками по три в ряд: каждая —
+ * отдельный бросок, сумма крупно, кубы под ней. Колонки сумм справа у такой
+ * карточки нет, плитки занимают всю ширину.
+ */
+.entry--repeated {
+  align-items: stretch;
+}
+
+.entry__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.entry__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 2px 4px 3px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
-  flex: 1;
 }
 
-/* Повторные броски: несколько чисел столбиком, каждое поменьше. */
-.entry__totals--many .entry__total {
-  font-size: 15px;
-  min-width: 40px;
+.entry__tile-total {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Время живёт в пустоте под результатом и не отнимает ширины у текста. */
+.entry__tile-detail {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Время в левом нижнем углу карточки, под броском: у всех записей в одном
+   месте, и глаз находит его не глядя. */
 .entry__time {
-  flex: none;
-  text-align: center;
+  display: block;
+  margin-top: 5px;
+  text-align: left;
   font-size: 10px;
   line-height: 1.2;
   color: var(--muted);
