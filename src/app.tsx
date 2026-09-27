@@ -29,6 +29,7 @@ import {
   type PresetBox,
 } from "./board/presets"
 import { postRollToBoard } from "./board/post"
+import { readGlobal, readScoped, resolveScope, writeGlobal, writeScoped } from "./board/scope"
 import { StatusBar } from "./ui/StatusBar"
 import { DiceBar } from "./ui/DiceBar"
 import { FormulaBar } from "./ui/FormulaBar"
@@ -49,22 +50,12 @@ const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
 const POLL_INTERVAL_MS = 4000
 
-function readJson<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-const writeJson = (key: string, value: unknown): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Хранилище может быть недоступно — работаем из памяти.
-  }
-}
+/**
+ * Сведение истории формул на момент, когда доска наконец назвалась: то, что
+ * игрок успел набрать до этого, остаётся сверху.
+ */
+const mergeFormulas = (fresh: string[], stored: string[]): string[] =>
+  [...fresh, ...stored.filter((item) => !fresh.includes(item))].slice(0, MAX_FORMULA_HISTORY)
 
 /** Пока доска не отвечает, броски всё равно должны подписываться кем-то стабильным. */
 const localUserId = (): string => {
@@ -99,6 +90,8 @@ export const App = () => {
   const [look, setLook] = useState<{ icon?: string; color?: string }>({})
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  /** Пространство доски поднято: локальную копию можно читать и писать. */
+  const [scoped, setScoped] = useState(false)
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
@@ -119,21 +112,47 @@ export const App = () => {
   characterRef.current = character
   lookRef.current = { icon: playerIcon, color: playerColor }
 
-  // Локальное состояние поднимаем сразу: панель обязана быть рабочей ещё до
-  // того, как выяснится, доехал ли SDK.
+  // Привычки игрока одни на все доски, поэтому поднимаются сразу: панель
+  // обязана быть рабочей ещё до того, как выяснится, доехал ли SDK.
   useEffect(() => {
     anonId.current = localUserId()
-    setEntries(readLocalLog())
-    setFormulaHistory(readJson<string[]>(FORMULA_HISTORY_KEY, []))
-    setPostToBoard(readJson<boolean>(POST_TO_BOARD_KEY, false))
-    setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
-    setDiceCollapsed(readJson<boolean>(DICE_COLLAPSED_KEY, false))
-    setCharacter(readJson<string>(CHARACTER_KEY, ""))
-    setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
-
-    const local = readLocalPresets()
-    setPersonal({ updatedAt: local.updatedAt, items: local.items })
+    setPostToBoard(readGlobal<boolean>(POST_TO_BOARD_KEY, false))
+    setDiceSet(readGlobal<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
+    setDiceCollapsed(readGlobal<boolean>(DICE_COLLAPSED_KEY, false))
+    setLook(readGlobal<{ icon?: string; color?: string }>(LOOK_KEY, {}))
   }, [])
+
+  /**
+   * Журнал, сохранённые броски и имя персонажа принадлежат доске, а
+   * localStorage — общий на все доски сразу. Поэтому сначала выясняем, на какой
+   * мы доске, и только потом читаем локальную копию: иначе партия видела бы
+   * историю соседней доски, в том числе чужой команды, а игрок ходил бы по
+   * всем играм под одним именем.
+   */
+  useEffect(() => {
+    if (scoped || status === "loading") return undefined
+    let alive = true
+
+    void resolveScope().then((ready) => {
+      if (!alive || !ready) return
+
+      // Журнал доски мог приехать раньше нас — не затираем его, а сводим.
+      setEntries((prev) => nextEntries(prev, readLocalLog()))
+      setFormulaHistory((prev) => mergeFormulas(prev, readScoped<string[]>(FORMULA_HISTORY_KEY, [])))
+
+      const local = readLocalPresets()
+      setPersonal((prev) =>
+        prev.updatedAt > local.updatedAt ? prev : { updatedAt: local.updatedAt, items: local.items },
+      )
+      // Если игрок успел переименоваться до ответа доски, его правка важнее.
+      setCharacter((prev) => prev || readScoped<string>(CHARACTER_KEY, ""))
+      setScoped(true)
+    })
+
+    return () => {
+      alive = false
+    }
+  }, [scoped, status])
 
   useEffect(() => {
     let alive = true
@@ -175,9 +194,8 @@ export const App = () => {
   useEffect(() => {
     if (status !== "connected") return undefined
 
-    const stopLog = subscribeBoardLog(
-      applyBoardEntries,
-      (message) => setShareError(`Журнал доски не подписался: ${message}`),
+    const stopLog = subscribeBoardLog(applyBoardEntries, (message) =>
+      setShareError(`Журнал доски не подписался: ${message}`),
     )
     const stopPresets = subscribeSharedPresets(setShared)
     void readSharedPresets().then(setShared)
@@ -197,10 +215,12 @@ export const App = () => {
     }
   }, [applyBoardEntries, status])
 
+  // Строго после подъёма пространства: иначе на доску уехал бы пустой набор,
+  // а с доски приехавший тут же затёрся бы локальной копией.
   useEffect(() => {
-    if (status !== "connected" || !user) return
+    if (!scoped || status !== "connected" || !user) return
     void syncPersonalPresets(user.id, personalRef.current).then(setPersonal)
-  }, [status, user])
+  }, [scoped, status, user])
 
   const savePersonal = useCallback(
     (items: Preset[]) => {
@@ -220,7 +240,7 @@ export const App = () => {
   const rememberFormula = useCallback((value: string) => {
     setFormulaHistory((prev) => {
       const next = [value, ...prev.filter((item) => item !== value)].slice(0, MAX_FORMULA_HISTORY)
-      writeJson(FORMULA_HISTORY_KEY, next)
+      writeScoped(FORMULA_HISTORY_KEY, next)
       return next
     })
   }, [])
@@ -289,8 +309,7 @@ export const App = () => {
   )
 
   /** Собирает строку формы из сохранённого броска: формула плюс метка. */
-  const toSource = (expression: string, label?: string): string =>
-    label ? `${expression} : ${label}` : expression
+  const toSource = (expression: string, label?: string): string => (label ? `${expression} : ${label}` : expression)
 
   /**
    * Звёздочка сохраняет сразу, без формы: цвет и название можно поправить
@@ -378,11 +397,11 @@ export const App = () => {
 
   const savePlayerLook = useCallback((next: PlayerLook) => {
     setCharacter(next.character)
-    writeJson(CHARACTER_KEY, next.character)
+    writeScoped(CHARACTER_KEY, next.character)
 
     const appearance = { icon: next.icon, color: next.color }
     setLook(appearance)
-    writeJson(LOOK_KEY, appearance)
+    writeGlobal(LOOK_KEY, appearance)
   }, [])
 
   const reorderPreset = useCallback(
@@ -395,19 +414,19 @@ export const App = () => {
 
   const changeDiceSet = useCallback((id: string) => {
     setDiceSet(id)
-    writeJson(DICE_SET_KEY, id)
+    writeGlobal(DICE_SET_KEY, id)
   }, [])
 
   const toggleDiceCollapsed = useCallback(() => {
     setDiceCollapsed((collapsed) => {
-      writeJson(DICE_COLLAPSED_KEY, !collapsed)
+      writeGlobal(DICE_COLLAPSED_KEY, !collapsed)
       return !collapsed
     })
   }, [])
 
   const togglePostToBoard = useCallback((next: boolean) => {
     setPostToBoard(next)
-    writeJson(POST_TO_BOARD_KEY, next)
+    writeGlobal(POST_TO_BOARD_KEY, next)
   }, [])
 
   return (

@@ -80,6 +80,7 @@ export const PlayerSettings = ({ character, icon, color, accountName, status, on
             onKeyDown={(event) => event.key === "Enter" && save()}
           />
         </label>
+        <p className="modal__hint">Имя привязано к доске: на другой игре можно играть другим персонажем.</p>
 
         <div className="modal__field">
           <span className="modal__label">

@@ -1,3 +1,4 @@
+import { readScoped, writeScoped } from "./scope"
 import { readKey, subscribeKey, updateKey } from "./storage"
 
 export const LOG_KEY = "log"
@@ -46,22 +47,17 @@ export const nextEntries = (prev: RollEntry[], incoming: RollEntry[]): RollEntry
   return same ? prev : merged
 }
 
+/**
+ * Копия журнала своей доски. Ключ разведён по доскам: без этого история одной
+ * партии всплывала на всех остальных досках, где открыта панель.
+ */
 export const readLocalLog = (): RollEntry[] => {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY)
-    const parsed: unknown = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? (parsed as RollEntry[]) : []
-  } catch {
-    return []
-  }
+  const parsed = readScoped<unknown>(LOCAL_KEY, [])
+  return Array.isArray(parsed) ? (parsed as RollEntry[]) : []
 }
 
 export const writeLocalLog = (entries: RollEntry[]): void => {
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)))
-  } catch {
-    // Приватный режим или переполненное хранилище — журнал в памяти всё равно жив.
-  }
+  writeScoped(LOCAL_KEY, entries.slice(0, MAX_ENTRIES))
 }
 
 export const readBoardLog = async (): Promise<RollEntry[]> => {
