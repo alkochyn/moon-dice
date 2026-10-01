@@ -36,6 +36,7 @@ import { DiceBar } from "./ui/DiceBar"
 import { PlayerBar } from "./ui/PlayerBar"
 import { FormulaBar } from "./ui/FormulaBar"
 import { Presets, type PresetDraft, type PresetScope } from "./ui/Presets"
+import { PanelTabs, type Panel } from "./ui/PanelTabs"
 import { RollLog } from "./ui/RollLog"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { Help } from "./ui/Help"
@@ -46,6 +47,7 @@ const LOCAL_USER_KEY = "dice.localUserId.v1"
 const POST_TO_BOARD_KEY = "dice.postToBoard.v1"
 const DICE_SET_KEY = "dice.set.v1"
 const DICE_COLLAPSED_KEY = "dice.collapsed.v1"
+const PANEL_KEY = "dice.panel.v1"
 const CHARACTER_KEY = "dice.character.v1"
 const LOOK_KEY = "dice.look.v1"
 const LANG_KEY = "dice.lang.v1"
@@ -105,7 +107,10 @@ export const App = () => {
   const [formulaHistory, setFormulaHistory] = useState<string[]>([])
   const [personal, setPersonal] = useState<PresetBox>({ updatedAt: 0, items: [] })
   const [shared, setShared] = useState<Preset[]>([])
-  const [scope, setScope] = useState<PresetScope>("mine")
+  const [panel, setPanel] = useState<Panel>("dice")
+  // Куда сохраняет кнопка у поля: в «Общие», только если открыты именно они,
+  // иначе — в свои. С вкладки кубов бросок уходит в «Мои».
+  const scope: PresetScope = panel === "shared" ? "shared" : "mine"
   const [presetDraft, setPresetDraft] = useState<PresetDraft | null>(null)
   const [diceSet, setDiceSet] = useState<string>(DEFAULT_DICE_SET)
   const [diceCollapsed, setDiceCollapsed] = useState(false)
@@ -116,6 +121,13 @@ export const App = () => {
   const [helpOpen, setHelpOpen] = useState(false)
   const [lang, setLang] = useState<Lang>(initialLang)
   const t = STRINGS[lang]
+
+  const changePanel = useCallback((next: Panel) => {
+    setPanel(next)
+    writeJson(PANEL_KEY, next)
+    // Правка чипа живёт в окошке у чипа; уходя с вкладки, закрываем её.
+    setPresetDraft(null)
+  }, [])
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
@@ -151,6 +163,8 @@ export const App = () => {
     setPostToBoard(readJson<boolean>(POST_TO_BOARD_KEY, false))
     setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
     setDiceCollapsed(readJson<boolean>(DICE_COLLAPSED_KEY, false))
+    const savedPanel = readJson<unknown>(PANEL_KEY, "dice")
+    if (savedPanel === "dice" || savedPanel === "mine" || savedPanel === "shared") setPanel(savedPanel)
     setCharacter(readJson<string>(CHARACTER_KEY, ""))
     setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
 
@@ -350,8 +364,10 @@ export const App = () => {
       const next = [...items, makePreset(name, parsed.expression, "slate")]
       if (scope === "mine") savePersonal(next)
       else saveShared(next)
+      // Сохранили с вкладки кубов — показываем, куда бросок лёг.
+      if (panel === "dice") changePanel("mine")
     },
-    [savePersonal, saveShared, scope, shared],
+    [panel, savePersonal, saveShared, scope, shared],
   )
 
   /** Звёздочка на карточке броска: сохраняем его формулу вместе с названием. */
@@ -460,26 +476,33 @@ export const App = () => {
 
       {shareError && <div className="warning">{shareError}</div>}
 
-      <DiceBar
-        diceSet={diceSet}
-        collapsed={diceCollapsed}
-        onToggleCollapsed={toggleDiceCollapsed}
-        onRoll={roll}
-      />
+      <section className="toolbox">
+        <PanelTabs
+          panel={panel}
+          dcc={diceSet === "dcc"}
+          collapsed={diceCollapsed}
+          onPanelChange={changePanel}
+          onToggleCollapsed={toggleDiceCollapsed}
+        />
 
-      <Presets
-        scope={scope}
-        onScopeChange={setScope}
-        items={scope === "mine" ? personal.items : shared}
+        {!diceCollapsed &&
+          (panel === "dice" ? (
+            <DiceBar diceSet={diceSet} onRoll={roll} />
+          ) : (
+            <Presets
+              scope={scope}
+              items={scope === "mine" ? personal.items : shared}
         sharedAvailable={status === "connected"}
         draft={presetDraft}
         onDraftChange={setPresetDraft}
         onDraftSubmit={submitDraft}
         onEdit={editPreset}
         onRoll={(preset) => roll(preset.formula, preset.name)}
-        onRemove={removePreset}
-        onReorder={reorderPreset}
-      />
+              onRemove={removePreset}
+              onReorder={reorderPreset}
+            />
+          ))}
+      </section>
 
       <FormulaBar
         formula={formula}

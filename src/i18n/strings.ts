@@ -31,13 +31,18 @@ const en = {
 
   dice: {
     roll: (die: string) => `Roll ${die}`,
-    show: "Show dice",
-    hide: "Collapse dice",
+  },
+
+  tabs: {
+    dice: "Dice",
+    dccDice: "DCC dice",
+    mine: "My rolls",
+    shared: "Shared rolls",
+    show: "Expand",
+    hide: "Collapse",
   },
 
   presets: {
-    mine: "My rolls",
-    shared: "Shared rolls",
     sharedOffline: "Shared rolls are only available on a board.",
     emptyMine: "Nothing saved yet. Save a formula with the save button by the field.",
     emptyShared: "No shared rolls yet.",
@@ -158,8 +163,8 @@ const en = {
       ["die button, Enter", "roll what's in the field"],
       ["↑ and ↓", "previous formulas, like in a terminal"],
       ["save by the field", "save the roll to the open tab"],
-      ["My rolls, Shared rolls", "your own rolls and ones shared with the party"],
-      ["⌃ by the dice", "collapse the dice to make room for history"],
+      ["Dice, My rolls, Shared rolls", "dice buttons, your saved rolls and ones shared with the party"],
+      ["⌃ by the tabs", "collapse the tabs to make room for history"],
       ["↻ in history", "reroll, keeping the label"],
       ["save on a formula", "save that roll for yourself"],
       ["✎ and × on a roll", "edit or delete; they appear on hover"],
@@ -254,13 +259,20 @@ const ru: Strings = {
 
   dice: {
     roll: (die) => `Бросить ${die}`,
-    show: "Показать кубы",
-    hide: "Свернуть кубы",
+  },
+
+  tabs: {
+    dice: "Кубы",
+    dccDice: "Кубы DCC",
+    // Короче английских: «Мои броски / Общие броски» не влезали в ширину
+    // панели рядом с «Кубы DCC», а звёздочка и цепочка и так поясняют смысл.
+    mine: "Мои",
+    shared: "Общие",
+    show: "Развернуть",
+    hide: "Свернуть",
   },
 
   presets: {
-    mine: "Мои броски",
-    shared: "Общие броски",
     sharedOffline: "Общие броски доступны только на доске.",
     emptyMine: "Пока пусто. Сохраните формулу кнопкой с дискетой у поля.",
     emptyShared: "Общих бросков пока нет.",
@@ -381,8 +393,8 @@ const ru: Strings = {
       ["кубик, Enter", "кинуть то, что в поле"],
       ["↑ и ↓", "прошлые формулы, как в терминале"],
       ["дискета у поля", "сохранить бросок в открытую вкладку"],
-      ["Мои, Общие броски", "свои броски и общие для всей партии"],
-      ["⌃ у кубов", "свернуть кубы, чтобы освободить место истории"],
+      ["Кубы, Мои, Общие броски", "кнопки кубов, свои сохранённые броски и общие для всей партии"],
+      ["⌃ у вкладок", "свернуть вкладки, чтобы освободить место истории"],
       ["↻ в истории", "перебросить вместе с названием"],
       ["дискета на формуле", "сохранить этот бросок себе"],
       ["✎ и × на броске", "изменить или удалить; появляются при наведении"],

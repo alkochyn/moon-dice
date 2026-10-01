@@ -86,6 +86,23 @@ export const RepeatIcon = ({ className }: Props) => (
   </svg>
 )
 
+/** Волшебная палочка с искрами — вкладка кубов DCC: набор волшебников. */
+export const WandIcon = ({ className }: Props) => (
+  <svg
+    {...box}
+    className={`icon${className ? ` ${className}` : ""}`}
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M4 20 15 9" />
+    <path d="M13.5 7.5 16.5 10.5" />
+    <path d="M18 2.5v3M16.5 4h3M20.5 8.5v2M19.5 9.5h2M10 3v2M9 4h2" />
+  </svg>
+)
+
 /** Шеврон вверх; свёрнутое состояние — тот же шеврон, повёрнутый стилями. */
 export const ChevronIcon = ({ className }: Props) => (
   <svg

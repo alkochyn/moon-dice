@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "preact/hooks"
 import { validateFormula } from "../dice"
 import { describeDiceError, useT } from "../i18n"
 import { PRESET_COLORS, type Preset } from "../board/presets"
-import { LinkIcon, StarIcon } from "./icons"
 
 export type PresetScope = "mine" | "shared"
 
@@ -28,7 +27,6 @@ interface Anchor {
 
 interface Props {
   scope: PresetScope
-  onScopeChange: (scope: PresetScope) => void
   items: Preset[]
   sharedAvailable: boolean
   draft: PresetDraft | null
@@ -112,7 +110,6 @@ const placeBelow = (rect: DOMRect): Anchor => {
 
 export const Presets = ({
   scope,
-  onScopeChange,
   items,
   sharedAvailable,
   draft,
@@ -300,32 +297,7 @@ export const Presets = ({
   }
 
   return (
-    <section className="section">
-      <div className="section__head">
-        {/* Вкладки сами служат заголовком секции: отдельная подпись
-            «Сохранённые» над ними только повторяла то же самое. */}
-        <div className="tabs" role="tablist">
-          <button
-            className={`tab${scope === "mine" ? " tab--active" : ""}`}
-            role="tab"
-            aria-selected={scope === "mine"}
-            onClick={() => onScopeChange("mine")}
-          >
-            <StarIcon />
-            {t.presets.mine}
-          </button>
-          <button
-            className={`tab${scope === "shared" ? " tab--active" : ""}`}
-            role="tab"
-            aria-selected={scope === "shared"}
-            onClick={() => onScopeChange("shared")}
-          >
-            <LinkIcon />
-            {t.presets.shared}
-          </button>
-        </div>
-      </div>
-
+    <>
       {locked ? (
         <div className="empty">{t.presets.sharedOffline}</div>
       ) : items.length === 0 ? (
@@ -461,6 +433,6 @@ export const Presets = ({
           {formulaError && <div className="error">{formulaError}</div>}
         </div>
       )}
-    </section>
+    </>
   )
 }
