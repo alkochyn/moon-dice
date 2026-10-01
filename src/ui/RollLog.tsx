@@ -1,7 +1,7 @@
 import type { RollEntry } from "../board/log"
 import { useT } from "../i18n"
 import { Avatar } from "./Avatar"
-import { RepeatIcon, StarIcon } from "./icons"
+import { RepeatIcon, SaveIcon } from "./icons"
 
 interface Props {
   entries: RollEntry[]
@@ -80,7 +80,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                         aria-label={t.log.saveNamed(entry.expression)}
                         title={t.log.save}
                       >
-                        <StarIcon />
+                        <SaveIcon />
                       </button>
                     </span>
                   </span>

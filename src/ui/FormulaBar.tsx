@@ -1,7 +1,8 @@
 import { useRef, useState } from "preact/hooks"
 
 import { useT } from "../i18n"
-import { DieIcon, StarIcon } from "./icons"
+import { PALETTE_HUES } from "./dieColor"
+import { RollIcon, SaveIcon } from "./icons"
 
 interface Props {
   formula: string
@@ -23,6 +24,14 @@ export const FormulaBar = ({
 }: Props) => {
   const t = useT()
   const inputRef = useRef<HTMLInputElement>(null)
+  // Кнопка броска перекрашивается при каждом наведении в другой цвет из
+  // палитры кубов. Стартует синей, как d20.
+  const [rollHue, setRollHue] = useState(220)
+  const shuffleHue = (): void =>
+    setRollHue((current) => {
+      const others = PALETTE_HUES.filter((hue) => hue !== current)
+      return others[Math.floor(Math.random() * others.length)] ?? current
+    })
   // -1 — «сейчас в поле то, что набрал игрок», иначе индекс в истории.
   const [cursor, setCursor] = useState(-1)
 
@@ -83,13 +92,17 @@ export const FormulaBar = ({
           onKeyDown={handleKeyDown}
           title={t.formula.hint}
         />
+        {/* Кнопка броска — такой же куб, как кнопки наверху: тот же объём и
+            подъём под курсором. */}
         <button
-          className="btn btn--compact btn--primary btn--icon"
+          className="die die--roll"
+          style={{ "--h": rollHue }}
+          onMouseEnter={shuffleHue}
           onClick={() => onRoll(formula)}
           title={t.formula.roll}
           aria-label={t.formula.roll}
         >
-          <DieIcon />
+          <RollIcon />
         </button>
         <button
           className="btn btn--compact btn--icon"
@@ -97,7 +110,7 @@ export const FormulaBar = ({
           title={t.formula.save}
           aria-label={t.formula.save}
         >
-          <StarIcon />
+          <SaveIcon />
         </button>
       </div>
 

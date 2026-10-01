@@ -16,17 +16,57 @@ const box = {
   focusable: "false",
 } as const
 
-/** Двадцатигранник анфас — кнопка броска. */
-export const DieIcon = ({ className }: Props) => (
+/**
+ * Два шестигранника — кнопка броска. Не d20: кнопка d20 стоит прямо над
+ * полем, и иконка-двадцатигранник читалась бы как «кинуть d20», а не как
+ * «кинуть то, что написано».
+ */
+export const RollIcon = ({ className }: Props) => (
   <svg {...box} className={`icon${className ? ` ${className}` : ""}`} fill="none" stroke="currentColor">
-    <path d="M12 2 21 7v10l-9 5-9-5V7z" stroke-width="1.6" stroke-linejoin="round" />
-    <path d="M12 6.5 17.5 16h-11z" stroke-width="1.4" stroke-linejoin="round" />
+    <rect x="2.5" y="8.5" width="11" height="11" rx="2.2" stroke-width="1.6" stroke-linejoin="round" />
+    <rect
+      x="11"
+      y="3"
+      width="10"
+      height="10"
+      rx="2"
+      transform="rotate(18 16 8)"
+      stroke-width="1.6"
+      stroke-linejoin="round"
+    />
+    <g fill="currentColor" stroke="none">
+      <circle cx="5.6" cy="11.6" r="1.05" />
+      <circle cx="8" cy="14" r="1.05" />
+      <circle cx="10.4" cy="16.4" r="1.05" />
+      <circle cx="14.6" cy="6.4" r="1" />
+      <circle cx="17.6" cy="9.6" r="1" />
+    </g>
   </svg>
 )
 
 export const StarIcon = ({ className }: Props) => (
   <svg {...box} className={`icon${className ? ` ${className}` : ""}`} fill="currentColor">
     <path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.6L12 17.6l-5.9 3.1 1.2-6.6L2.5 9.5l6.6-.9z" />
+  </svg>
+)
+
+/**
+ * Дискета — сохранить бросок. Звезда осталась только на вкладке «Мои
+ * броски»: как кнопка она читалась «в избранное» или «оценить», а не
+ * «сохранить».
+ */
+export const SaveIcon = ({ className }: Props) => (
+  <svg
+    {...box}
+    className={`icon${className ? ` ${className}` : ""}`}
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.7"
+    stroke-linejoin="round"
+  >
+    <path d="M4.5 3.5h12l3 3v12.5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5z" />
+    <path d="M8 3.5v5h7v-5" />
+    <rect x="7.5" y="13" width="9" height="7.5" rx="0.5" />
   </svg>
 )
 

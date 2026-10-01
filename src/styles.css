@@ -300,6 +300,21 @@ button {
   box-shadow: none;
 }
 
+/* Кнопка броска: куб по высоте поля ввода, шире обычного — главная кнопка. */
+.die--roll {
+  justify-content: center;
+  padding: 4px 12px;
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out,
+    background-color 0.12s ease-out;
+}
+
+.die--roll .icon {
+  width: 19px;
+  height: 19px;
+}
+
 .die-icon {
   flex: none;
   width: 15px;
