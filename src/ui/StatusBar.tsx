@@ -1,4 +1,5 @@
 import type { BoardStatus } from "../board/sdk"
+import { useT } from "../i18n"
 
 interface Props {
   status: BoardStatus
@@ -10,19 +11,14 @@ interface Props {
  * нового. А вот про локальный режим игрок знать обязан — иначе он уверен, что
  * партия видит его броски, а они остались в одном браузере.
  */
-const LABELS: Record<BoardStatus, string> = {
-  loading: "Подключаемся к доске…",
-  connected: "",
-  offline: "Локальный режим — броски не уходят в общий журнал",
-}
-
 export const StatusBar = ({ status }: Props) => {
+  const t = useT()
   if (status === "connected") return null
 
   return (
     <div className="status">
       <span className={`status__dot status__dot--${status}`} />
-      <span>{LABELS[status]}</span>
+      <span>{t.status[status]}</span>
     </div>
   )
 }

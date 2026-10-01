@@ -1,4 +1,4 @@
-import { DiceError, type Node, type ParsedFormula } from "./types"
+import { DiceError, type DiceErrorCode, type Node, type ParsedFormula } from "./types"
 import { tokenize, type Token } from "./tokenize"
 
 export const LIMITS = {
@@ -25,10 +25,10 @@ class Parser {
     return token
   }
 
-  private expectNumber(what: string): { value: number; pos: number } {
+  private expectNumber(code: DiceErrorCode): { value: number; pos: number } {
     const token = this.peek()
     if (token.type !== "number") {
-      throw new DiceError(`Ожидалось число: ${what}`, token.pos)
+      throw new DiceError(code, {}, token.pos)
     }
     this.next()
     return { value: Number(token.value), pos: token.pos }
@@ -85,7 +85,7 @@ class Parser {
       const inner = this.parseExpression()
       const closing = this.peek()
       if (closing.type !== "rparen") {
-        throw new DiceError("Не закрыта скобка", closing.pos)
+        throw new DiceError("unclosedParen", {}, closing.pos)
       }
       this.next()
       inner.paren = true
@@ -105,25 +105,25 @@ class Parser {
     }
 
     if (token.type === "eof") {
-      throw new DiceError("Формула обрывается — не хватает значения", token.pos)
+      throw new DiceError("unexpectedEnd", {}, token.pos)
     }
 
-    throw new DiceError(`Здесь не ожидалось «${token.value}»`, token.pos)
+    throw new DiceError("unexpectedToken", { value: token.value }, token.pos)
   }
 
   private parseDice(count: number, startPos: number): Node {
     const dToken = this.next() // сам знак `d`
 
     if (this.peek().type !== "number") {
-      throw new DiceError("После «d» нужно число граней, например d20", dToken.pos + 1)
+      throw new DiceError("needSides", {}, dToken.pos + 1)
     }
-    const { value: sides, pos: sidesPos } = this.expectNumber("число граней куба")
+    const { value: sides, pos: sidesPos } = this.expectNumber("expectedSides")
 
     if (count < 1 || count > LIMITS.maxCount) {
-      throw new DiceError(`Число кубов должно быть от 1 до ${LIMITS.maxCount}`, startPos)
+      throw new DiceError("countRange", { max: LIMITS.maxCount }, startPos)
     }
     if (sides < 1 || sides > LIMITS.maxSides) {
-      throw new DiceError(`Число граней должно быть от 1 до ${LIMITS.maxSides}`, sidesPos)
+      throw new DiceError("sidesRange", { max: LIMITS.maxSides }, sidesPos)
     }
 
     const node: Node = { kind: "dice", count, sides, explode: false, paren: false }
@@ -134,7 +134,7 @@ class Parser {
       if (token.type === "bang") {
         this.next()
         if (sides < 2) {
-          throw new DiceError("Взрывные кубы невозможны на d1 — бросок никогда не закончится", token.pos)
+          throw new DiceError("explodeD1", {}, token.pos)
         }
         node.explode = true
         continue
@@ -144,9 +144,9 @@ class Parser {
 
       if (token.value === "kh" || token.value === "kl") {
         this.next()
-        const n = this.peek().type === "number" ? this.expectNumber("сколько кубов оставить").value : 1
+        const n = this.peek().type === "number" ? this.expectNumber("expectedKeepCount").value : 1
         if (n < 1 || n > node.count) {
-          throw new DiceError(`Оставить можно от 1 до ${node.count} кубов`, token.pos)
+          throw new DiceError("keepRange", { max: node.count }, token.pos)
         }
         node.keep = { mode: token.value === "kh" ? "h" : "l", n }
         continue
@@ -155,19 +155,19 @@ class Parser {
       if (token.value === "adv" || token.value === "dis") {
         this.next()
         if (node.count !== 1) {
-          throw new DiceError(`«${token.value}» применяется к одному кубу: пишите d20${token.value}`, token.pos)
+          throw new DiceError("singleDieOnly", { value: token.value }, token.pos)
         }
         node.count = 2
         node.keep = { mode: token.value === "adv" ? "h" : "l", n: 1 }
         continue
       }
 
-      throw new DiceError(`Непонятный модификатор «${token.value}»`, token.pos)
+      throw new DiceError("unknownModifier", { value: token.value }, token.pos)
     }
 
     this.diceBudget -= node.count
     if (this.diceBudget < 0) {
-      throw new DiceError(`Слишком много кубов в одной формуле (лимит ${LIMITS.maxDicePerRoll})`, startPos)
+      throw new DiceError("tooManyDice", { max: LIMITS.maxDicePerRoll }, startPos)
     }
 
     return node
@@ -180,7 +180,7 @@ class Parser {
     if (first.type === "number" && second?.type === "hash") {
       const repeat = Number(first.value)
       if (repeat < 1 || repeat > LIMITS.maxRepeat) {
-        throw new DiceError(`Повторов должно быть от 1 до ${LIMITS.maxRepeat}`, first.pos)
+        throw new DiceError("repeatRange", { max: LIMITS.maxRepeat }, first.pos)
       }
       this.next()
       this.next()
@@ -193,7 +193,7 @@ class Parser {
   expectEnd(): void {
     const token = this.peek()
     if (token.type !== "eof") {
-      throw new DiceError(`Лишнее в конце формулы: «${token.value}»`, token.pos)
+      throw new DiceError("trailing", { value: token.value }, token.pos)
     }
   }
 }
@@ -204,7 +204,7 @@ export const parseFormula = (source: string): ParsedFormula => {
   const rawLabel = colon === -1 ? "" : source.slice(colon + 1).trim()
 
   if (!rawExpression) {
-    throw new DiceError("Пустая формула", 0)
+    throw new DiceError("empty", {}, 0)
   }
 
   const parser = new Parser(tokenize(rawExpression))

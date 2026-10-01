@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks"
 import { getMiro, isInsideMiro, isPanelMode, probeUser, type BoardStatus } from "../board/sdk"
 import { probeBoardStorage } from "../board/storage"
 import { countLiveUpdates, describeBoardLog } from "../board/log"
+import { useT, type Strings } from "../i18n"
 
 /**
  * Экран для разбора полётов: игрок открывает, жмёт «скопировать» и присылает
@@ -13,20 +14,22 @@ interface Props {
 
 type Rows = Array<[string, string]>
 
-const pingSelf = async (): Promise<string> => {
+type Diag = Strings["diag"]
+
+const pingSelf = async (d: Diag): Promise<string> => {
   const started = performance.now()
   try {
     const response = await fetch(`${location.pathname}?ping=${Date.now()}`, { cache: "no-store" })
     const ms = Math.round(performance.now() - started)
-    return `${response.status} за ${ms} мс`
+    return d.pingValue(response.status, ms)
   } catch (error) {
-    return `недоступен (${(error as Error).message})`
+    return d.pingFailed((error as Error).message)
   }
 }
 
-const swState = (): string => {
-  if (!("serviceWorker" in navigator)) return "не поддерживается браузером"
-  return navigator.serviceWorker.controller ? "активен, панель работает офлайн" : "не активен"
+const swState = (d: Diag): string => {
+  if (!("serviceWorker" in navigator)) return d.swUnsupported
+  return navigator.serviceWorker.controller ? d.swActive : d.swInactive
 }
 
 /**
@@ -36,53 +39,55 @@ const swState = (): string => {
  * исключение. Для приложения, которое читает его на старте, это белый экран,
  * поэтому проверяем прямо и показываем текстом.
  */
-const localStorageState = (): string => {
+const localStorageState = (d: Diag): string => {
   const key = "__dice_probe"
 
   try {
     localStorage.setItem(key, "1")
     const readBack = localStorage.getItem(key) === "1"
     localStorage.removeItem(key)
-    return readBack ? "доступно" : "не сохраняет значения"
+    return readBack ? d.storageOk : d.storageNotSaving
   } catch (error) {
-    return `заблокировано браузером (${(error as Error).name})`
+    return d.storageBlocked((error as Error).name)
   }
 }
 
 export const Diagnostics = ({ status }: Props) => {
-  const [ping, setPing] = useState("проверяем…")
-  const [boardStorage, setBoardStorage] = useState("проверяем…")
-  const [player, setPlayer] = useState("проверяем…")
-  const [boardLog, setBoardLog] = useState("проверяем…")
+  const t = useT()
+  const d = t.diag
+  const [ping, setPing] = useState(d.checking)
+  const [boardStorage, setBoardStorage] = useState(d.checking)
+  const [player, setPlayer] = useState(d.checking)
+  const [boardLog, setBoardLog] = useState(d.checking)
   const [live, setLive] = useState(0)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    void pingSelf().then(setPing)
-  }, [])
+    void pingSelf(d).then(setPing)
+  }, [d])
 
   useEffect(() => {
-    void probeBoardStorage().then(setBoardStorage)
-    void probeUser().then(setPlayer)
-    void describeBoardLog().then(setBoardLog)
+    void probeBoardStorage(d).then(setBoardStorage)
+    void probeUser(d).then(setPlayer)
+    void describeBoardLog(d, t.locale).then(setBoardLog)
     setLive(countLiveUpdates())
-  }, [status])
+  }, [d, status, t.locale])
 
   const rows: Rows = [
-    ["Версия", `${__APP_VERSION__} от ${__BUILD_TIME__}`],
-    ["Связь", status === "connected" ? "SDK подключён" : status === "loading" ? "подключаемся" : "SDK недоступен"],
-    ["miro.js", getMiro() ? "загружен" : "не загружен"],
-    ["Контекст", isInsideMiro() ? (isPanelMode() ? "панель в Miro" : "фоновый кадр в Miro") : "обычная вкладка"],
-    ["Хостинг", location.origin],
-    ["Отклик", ping],
-    ["Игрок", player],
-    ["Хранилище доски", boardStorage],
-    ["Журнал на доске", boardLog],
-    ["Живые обновления", live ? `${live} получено подпиской` : "подпиской не приходили, журнал едет опросом"],
-    ["Хранилище браузера", localStorageState()],
-    ["Куки", navigator.cookieEnabled ? "разрешены" : "заблокированы для стороннего кадра"],
-    ["Офлайн-кэш", swState()],
-    ["Браузер", navigator.userAgent],
+    [d.version, d.versionValue(__APP_VERSION__, __BUILD_TIME__)],
+    [d.connection, status === "connected" ? d.sdkConnected : status === "loading" ? d.sdkConnecting : d.sdkUnavailable],
+    [d.miroJs, getMiro() ? d.loaded : d.notLoaded],
+    [d.context, isInsideMiro() ? (isPanelMode() ? d.contextPanel : d.contextBackground) : d.contextTab],
+    [d.hosting, location.origin],
+    [d.ping, ping],
+    [d.player, player],
+    [d.boardStorage, boardStorage],
+    [d.boardLog, boardLog],
+    [d.liveUpdates, live ? d.liveValue(live) : d.liveNone],
+    [d.browserStorage, localStorageState(d)],
+    [d.cookies, navigator.cookieEnabled ? d.cookiesOn : d.cookiesOff],
+    [d.offlineCache, swState(d)],
+    [d.browser, navigator.userAgent],
   ]
 
   const copy = (): void => {
@@ -102,7 +107,7 @@ export const Diagnostics = ({ status }: Props) => {
         </div>
       ))}
       <button className="btn btn--ghost" onClick={copy}>
-        {copied ? "скопировано" : "скопировать отчёт"}
+        {copied ? d.copied : d.copy}
       </button>
     </div>
   )

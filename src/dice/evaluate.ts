@@ -67,7 +67,7 @@ export const evaluate = (node: Node, rng: Rng = cryptoRng): EvalNode => {
           value = left.value * right.value
           break
         case "/":
-          if (right.value === 0) throw new DiceError("Деление на ноль")
+          if (right.value === 0) throw new DiceError("divisionByZero")
           // Округление вниз — привычная для НРИ конвенция.
           value = Math.floor(left.value / right.value)
           break

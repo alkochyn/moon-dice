@@ -1,10 +1,14 @@
 :root {
+  /* Белый фон, как у самой доски Miro: панель не должна выделяться пятном
+     рядом с холстом. */
   --bg: #ffffff;
+  --card: #ffffff;
   --surface: #f5f6f8;
   --surface-2: #ebedf0;
   --text: #1a1a1a;
   --muted: #6b7280;
   --border: #dcdfe4;
+  --border-strong: #c4c9d2;
   --accent: #4262ff;
   --accent-soft: #e9edff;
   --accent-text: #ffffff;
@@ -124,7 +128,7 @@ button {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--card);
   color: var(--text);
   font: inherit;
   font-variant-numeric: tabular-nums;
@@ -143,8 +147,24 @@ button {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--card);
   white-space: nowrap;
+}
+
+.btn {
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+.btn:hover:not(.btn--ghost) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 12%);
+}
+
+.btn:active {
+  transform: none;
+  box-shadow: none;
 }
 
 .btn:hover {
@@ -227,26 +247,28 @@ button {
 }
 
 /*
- * Кубы — объёмные клавиши в приглушённом цвете своего куба (оттенок --h
- * приходит из DiceBar). Нижняя кромка и проседание при нажатии дают понять,
- * что кнопку жмут, а не читают.
+ * Кубы — плоские плашки в приглушённом цвете своего куба (оттенок --h
+ * приходит из DiceBar): тот же язык, что у сохранённых бросков, — заливка
+ * и рамка одного тона, без объёма.
+ */
+/*
+ * Яркая пастель с лёгким градиентом: светлее сверху, гуще снизу. Надпись и
+ * значок — тёмным тоном того же цвета, так кубы сочнее прежних, но остаются
+ * в одной гамме с чипами сохранённых бросков.
  */
 .die {
   --h: 230;
-  --die-top: hsl(var(--h) 45% 96%);
-  --die-bottom: hsl(var(--h) 38% 91%);
-  --die-edge: hsl(var(--h) 26% 76%);
-  --die-lip: hsl(var(--h) 26% 66%);
+  --die-top: hsl(var(--h) 90% 96%);
+  --die-bottom: hsl(var(--h) 80% 86%);
+  --die-edge: hsl(var(--h) 65% 70%);
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 7px 4px 5px;
+  padding: 4px 8px 4px 6px;
   border: 1px solid var(--die-edge);
-  border-bottom: 3px solid var(--die-lip);
   border-radius: var(--radius);
   background: linear-gradient(to bottom, var(--die-top), var(--die-bottom));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 1px 1px rgb(0 0 0 / 6%);
-  color: hsl(var(--h) 38% 30%);
+  color: hsl(var(--h) 70% 26%);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
@@ -254,18 +276,28 @@ button {
   white-space: nowrap;
 }
 
-/* Наведение как у сохранённых бросков: заливка густеет в том же цвете,
-   без затемнения и без чужого акцентного синего. */
+/* Наведение: заливка густеет в том же цвете, без чужого акцентного синего. */
+.die {
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+/* В покое кубы плоские, а под курсором чуть приподнимаются: объём
+   появляется только там, где его можно нажать. */
 .die:hover {
-  --die-top: hsl(var(--h) 55% 94%);
-  --die-bottom: hsl(var(--h) 48% 87%);
-  --die-edge: hsl(var(--h) 32% 70%);
+  --die-top: hsl(var(--h) 90% 93%);
+  --die-bottom: hsl(var(--h) 80% 80%);
+  --die-edge: hsl(var(--h) 60% 60%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px hsl(var(--h) 50% 35% / 25%);
 }
 
 .die:active {
-  transform: translateY(2px);
-  border-bottom-width: 1px;
-  margin-bottom: 2px;
+  --die-top: hsl(var(--h) 80% 84%);
+  --die-bottom: hsl(var(--h) 80% 84%);
+  transform: none;
+  box-shadow: none;
 }
 
 .die-icon {
@@ -318,39 +350,111 @@ button {
   flex: 1;
 }
 
+/*
+ * Вкладки сохранённых — текстом в стиле заголовков секций, с подчёркиванием
+ * у активной. Серая «таблетка» была самым тяжёлым элементом панели и спорила
+ * с цветными чипами под ней.
+ */
 .tabs {
-  display: inline-flex;
-  gap: 2px;
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 2px;
+  display: flex;
+  gap: 14px;
 }
 
 .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: 0;
+  border-bottom: 2px solid transparent;
   background: none;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 0 3px;
   font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--muted);
+}
+
+.tab .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.tab:hover {
+  color: var(--text);
 }
 
 .dicebar {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 4px;
 }
 
-.dicebar__head {
+.dicebar .dice-grid {
+  flex: 1;
+  min-width: 0;
+}
+
+.dicebar--collapsed {
+  justify-content: flex-end;
+}
+
+.dicebar__toggle {
+  flex: none;
+  padding: 4px;
+  /* Вровень с первым рядом кубов, а не с верхом их рамок. */
+  margin-top: 2px;
+}
+
+/* --- Игрок --- */
+.playerbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+}
+
+.playerbar .btn--icon {
+  padding: 4px;
+}
+
+.playerbar__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 2px 6px 2px 2px;
+  margin-left: -2px;
+  border-radius: 999px;
+}
+
+.playerbar__who:hover {
+  background: var(--surface);
+}
+
+.playerbar__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.icon--flipped {
+  transform: rotate(180deg);
+}
+
+/* --- Выбор набора кубов в настройках --- */
+/* Отдельная группа после всего, что про внешность игрока: линия отделяет
+   её от подписи про иконки над ней. */
+.modal__field--group {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
 }
 
 .tab--active {
-  background: var(--bg);
   color: var(--text);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  border-bottom-color: var(--text);
 }
 
 /* --- Пресеты --- */
@@ -362,6 +466,10 @@ button {
      журналу не остаётся места. */
   max-height: 26vh;
   overflow-y: auto;
+  /* Запас под подъём и тень чипа при наведении: прокручиваемый список
+     обрезает всё, что выходит за его край. */
+  padding: 2px 2px 4px;
+  margin: -2px -2px -4px;
 }
 
 /*
@@ -369,16 +477,18 @@ button {
  * панель, и в строку помещался один бросок вместо двух.
  */
 .preset {
-  /* Цвет броска красит весь чип лёгкой заливкой и рамкой вместо полоски
-     слева: так чипы читаются цветными плашками, а не карточками с меткой. */
-  --preset-bg: color-mix(in srgb, var(--chip) 8%, var(--bg));
-  --preset-bg-hover: color-mix(in srgb, var(--chip) 15%, var(--bg));
+  /* Тот же язык, что у кубов: яркая пастель с градиентом сверху вниз и
+     рамкой насыщеннее заливки, надписи — тёмным тоном цвета броска. */
+  --preset-top: color-mix(in srgb, var(--chip) 9%, #fff);
+  --preset-bottom: color-mix(in srgb, var(--chip) 24%, #fff);
+  --preset-edge: color-mix(in srgb, var(--chip) 50%, #fff);
+  --preset-fill: linear-gradient(to bottom, var(--preset-top), var(--preset-bottom));
   position: relative;
   display: inline-flex;
   align-items: center;
-  border: 1px solid color-mix(in srgb, var(--chip) 30%, var(--bg));
+  border: 1px solid var(--preset-edge);
   border-radius: var(--radius);
-  background: var(--preset-bg);
+  background: var(--preset-fill);
   /*
    * Нижний предел ширины держит карандаш и крестик: они всплывают оверлеем
    * у правого края, и на коротком чипе вроде «1d6» накрывали его целиком —
@@ -388,11 +498,51 @@ button {
   min-width: min(118px, 100%);
   max-width: calc(50% - 3px);
   cursor: grab;
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
-.preset--dragging {
-  opacity: 0.45;
+/* Копия взятого чипа: едет за курсором поверх всей панели, слегка
+   наклонена и приподнята — видно, что её держат. */
+.preset--ghost {
+  position: fixed;
+  z-index: 20;
+  max-width: none;
+  min-width: 0;
+  pointer-events: none;
+  opacity: 0.92;
+  transform: rotate(-2deg);
+  transition: none;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 20%);
+}
+
+/* Линия между чипами — туда встанет перенесённый. Своя ширина у неё есть,
+   поэтому соседи справа раздвигаются, освобождая место. */
+.preset-drop {
+  flex: none;
+  align-self: stretch;
+  width: 3px;
+  margin: 0 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.presets--dragging,
+.presets--dragging * {
   cursor: grabbing;
+}
+
+/*
+ * Надписи на кубах и сохранённых бросках не выделяются: это кнопки, а не
+ * текст. Иначе перетаскивание чипа заодно протягивало выделение через весь
+ * список, и он заливался синим.
+ */
+.die,
+.preset,
+.preset-drop {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* В правке чип не меняет размера — только подсвечивается, чтобы было видно,
@@ -461,7 +611,21 @@ button {
 
 .preset:hover,
 .preset:focus-within {
-  background: var(--preset-bg-hover);
+  --preset-top: color-mix(in srgb, var(--chip) 15%, #fff);
+  --preset-bottom: color-mix(in srgb, var(--chip) 34%, #fff);
+  --preset-edge: color-mix(in srgb, var(--chip) 65%, #fff);
+}
+
+/* Подъём как у кубов, но только под мышью: на фокусе и в правке чип стоит
+   на месте, иначе окошко правки отрывалось бы от него. */
+.preset:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--chip) 25%, transparent);
+}
+
+.preset:active {
+  transform: none;
+  box-shadow: none;
 }
 
 .preset__name {
@@ -488,7 +652,7 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--chip) 55%, var(--text));
 }
 
 /* Действия всплывают у правого края чипа поверх его содержимого. */
@@ -501,7 +665,10 @@ button {
   align-items: center;
   gap: 2px;
   padding: 0 4px 0 10px;
-  background: linear-gradient(to right, transparent, var(--preset-bg-hover) 12px);
+  /* Подложка — тот же вертикальный градиент, что у чипа, а слева она
+     растворяется маской: иначе на градиенте торчала бы плоская заплатка. */
+  background: var(--preset-fill);
+  mask-image: linear-gradient(to right, transparent, #000 12px);
   border-radius: 0 var(--radius) var(--radius) 0;
   opacity: 0;
   pointer-events: none;
@@ -549,7 +716,7 @@ button {
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--chip) 65%, var(--text));
+  color: color-mix(in srgb, var(--chip) 72%, #000);
 }
 
 .colors {
@@ -637,15 +804,15 @@ button {
   gap: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--card);
   padding: 4px 6px;
 }
 
-/* Свои броски заметно жирнее: рамка рисуется внутренней тенью, чтобы
-   содержимое карточки не съезжало на пиксель. */
+/* Свои броски — лёгкая подложка и рамка темнее: заметно, но без синей
+   рамки, которая в одиночной игре красила весь журнал. */
 .entry--mine {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: var(--border-strong);
+  background: #f7f8fb;
 }
 
 .entry__body {
@@ -746,6 +913,10 @@ button {
  * лишние 40 пикселей справа стоят дороже, чем спрятанная под курсором формула.
  * Фон совпадает с карточкой, поэтому формула под иконками не просвечивает.
  */
+.entry--mine .entry__actions {
+  background: #f7f8fb;
+}
+
 .entry__actions {
   position: absolute;
   top: 0;
@@ -756,7 +927,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--surface);
+  background: var(--card);
   opacity: 0;
   pointer-events: none;
 }
@@ -801,9 +972,9 @@ button {
   min-width: 54px;
   max-width: 38%;
   padding: 3px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .entry__total-value {
@@ -845,9 +1016,9 @@ button {
   align-items: center;
   min-width: 0;
   padding: 2px 4px 3px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .entry__tile-total {

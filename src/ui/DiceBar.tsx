@@ -1,68 +1,24 @@
 import type { JSX } from "preact"
-import { DICE_SETS, findDiceSet } from "../data/diceSets"
+import { findDiceSet } from "../data/diceSets"
 import { DieIcon, dieSides } from "./DieIcon"
+import { useT } from "../i18n"
+import { ChevronIcon } from "./icons"
 
 interface Props {
   diceSet: string
   collapsed: boolean
-  onDiceSetChange: (id: string) => void
   onToggleCollapsed: () => void
   onRoll: (formula: string) => void
-  onOpenHelp: () => void
-  onOpenSettings: () => void
 }
 
-export const DiceBar = ({
-  diceSet,
-  collapsed,
-  onDiceSetChange,
-  onToggleCollapsed,
-  onRoll,
-  onOpenHelp,
-  onOpenSettings,
-}: Props) => {
+export const DiceBar = ({ diceSet, collapsed, onToggleCollapsed, onRoll }: Props) => {
+  const t = useT()
   const dice = findDiceSet(diceSet).dice
 
   return (
-    <div className="dicebar">
-      <div className="dicebar__head">
-        <button
-          className="btn btn--ghost btn--icon"
-          onClick={onToggleCollapsed}
-          title={collapsed ? "Показать кубы" : "Свернуть кубы"}
-          aria-expanded={!collapsed}
-        >
-          {collapsed ? "▾" : "▴"}
-        </button>
-
-        <div className="tabs">
-          {DICE_SETS.map((set) => (
-            <button
-              key={set.id}
-              className={`tab${set.id === diceSet ? " tab--active" : ""}`}
-              onClick={() => onDiceSetChange(set.id)}
-              title={set.hint}
-            >
-              {set.title}
-            </button>
-          ))}
-        </div>
-
-        <span className="section__spacer" />
-
-        <button className="btn btn--ghost btn--icon" onClick={onOpenHelp} title="Как кидать" aria-label="Справка">
-          ?
-        </button>
-        <button
-          className="btn btn--ghost btn--icon"
-          onClick={onOpenSettings}
-          title="Настройки игрока"
-          aria-label="Настройки игрока"
-        >
-          ⚙
-        </button>
-      </div>
-
+    // Стрелка сворачивания стоит справа в одном ряду с кубами: своя строка под
+    // одну стрелку отнимала у журнала высоту, ничего не сообщая.
+    <div className={`dicebar${collapsed ? " dicebar--collapsed" : ""}`}>
       {!collapsed && (
         <div className="dice-grid">
           {dice.map((item) => (
@@ -71,7 +27,7 @@ export const DiceBar = ({
               className="die"
               style={dieStyle(item)}
               onClick={() => onRoll(item)}
-              title={`Бросить ${item}`}
+              title={t.dice.roll(item)}
             >
               <DieIcon die={item} />
               {item}
@@ -79,19 +35,49 @@ export const DiceBar = ({
           ))}
         </div>
       )}
+
+      <button
+        className="btn btn--ghost btn--icon dicebar__toggle"
+        onClick={onToggleCollapsed}
+        title={collapsed ? t.dice.show : t.dice.hide}
+        aria-label={collapsed ? t.dice.show : t.dice.hide}
+        aria-expanded={!collapsed}
+      >
+        <ChevronIcon className={collapsed ? "icon--flipped" : undefined} />
+      </button>
     </div>
   )
 }
 
 /*
- * У каждого куба свой оттенок по числу граней: от красного у d2 до фиолетового
- * у d100, по логарифмической шкале, иначе мелкие кубы слиплись бы в один цвет.
- * Оттенок привязан к кубу, а не к месту в наборе: d20 синий и в basic, и в DCC,
+ * Оттенок каждого куба подобран вручную. Плавная шкала по числу граней
+ * давала соседям в цепочке DCC (d4, d5, d6, d7) почти одинаковый цвет, а
+ * здесь соседи по цепочке всегда заметно различаются. Оттенок привязан к
+ * кубу, а не к месту в наборе: d20 синий и в стандартном наборе, и в DCC,
  * и глаз со временем находит куб по цвету, не читая надпись.
  */
+const DIE_HUES: Record<number, number> = {
+  2: 300,
+  3: 160,
+  4: 0,
+  5: 80,
+  6: 28,
+  7: 250,
+  8: 46,
+  10: 140,
+  12: 180,
+  14: 330,
+  16: 100,
+  20: 220,
+  24: 15,
+  30: 195,
+  100: 275,
+}
+
 function dieStyle(die: string): JSX.CSSProperties | undefined {
   const sides = dieSides(die)
   if (!sides || sides < 2) return undefined
-  const hue = Math.round((Math.log(sides / 2) / Math.log(50)) * 285)
+  // Куб не из таблицы (d7 в формуле — не повод падать) берёт оттенок по шкале.
+  const hue = DIE_HUES[sides] ?? Math.round((Math.log(sides / 2) / Math.log(50)) * 285)
   return { "--h": hue } as JSX.CSSProperties
 }

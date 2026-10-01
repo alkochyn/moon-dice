@@ -1,0 +1,471 @@
+import type { DiceError, DiceErrorCode, DiceErrorParams } from "../dice"
+
+/**
+ * Все строки интерфейса на двух языках. Английский — основной: под него
+ * собирается витрина Miro и ревью, русский — для своей партии. Форма словаря
+ * задаётся английским, и русский обязан её повторить: пропущенную строку
+ * поймает компилятор, а не игрок.
+ */
+
+type ErrorText = (params: DiceErrorParams) => string
+
+const en = {
+  locale: "en-GB",
+
+  player: {
+    fallbackName: "You",
+    accountFallback: "Player",
+    openSettings: "Name and icon are set in settings",
+  },
+
+  status: {
+    loading: "Connecting to the board…",
+    offline: "Local mode: rolls are not shared with the party",
+  },
+
+  header: {
+    help: "Help",
+    helpTitle: "How to roll",
+    settings: "Settings",
+  },
+
+  dice: {
+    roll: (die: string) => `Roll ${die}`,
+    show: "Show dice",
+    hide: "Collapse dice",
+  },
+
+  presets: {
+    mine: "My rolls",
+    shared: "Shared rolls",
+    sharedOffline: "Shared rolls are only available on a board.",
+    emptyMine: "Nothing saved yet. Save a formula with the ★ button.",
+    emptyShared: "No shared rolls yet.",
+    edit: "Edit roll",
+    editNamed: (name: string) => `Edit ${name}`,
+    remove: "Delete roll",
+    removeNamed: (name: string) => `Delete ${name}`,
+    editPlaceholder: "1d8+3 : Main attack damage",
+    color: (color: string) => `Colour ${color}`,
+    save: "Save",
+    saveRoll: "Save roll",
+    cancel: "Cancel",
+    cancelEdit: "Cancel editing",
+  },
+
+  formula: {
+    label: "Roll formula",
+    placeholder: "1d20+1d5+6 : attack",
+    hint: "Enter to roll, ↑/↓ for previous formulas",
+    roll: "Roll",
+    save: "Save roll",
+  },
+
+  log: {
+    title: "Roll history",
+    empty: "No rolls yet.",
+    reroll: "Reroll",
+    rerollNamed: (formula: string) => `Reroll ${formula}`,
+    save: "Save",
+    saveNamed: (formula: string) => `Save ${formula}`,
+  },
+
+  postToBoard: "Also post rolls to the board as sticky notes",
+
+  errors: {
+    parseFailed: "Couldn't read the formula",
+    presetPrefix: (name: string, message: string) => `“${name}”: ${message}`,
+    sharedOffline: "Shared rolls are only available on a board",
+    logSubscribe: (message: string) => `Board history didn't subscribe: ${message}`,
+    publishFailed: "The roll didn't reach the shared history. Open diagnostics and check the board storage",
+  },
+
+  diceErrors: {
+    empty: () => "Empty formula",
+    divisionByZero: () => "Division by zero",
+    expectedSides: () => "Expected a number: sides of the die",
+    expectedKeepCount: () => "Expected a number: how many dice to keep",
+    unclosedParen: () => "Unclosed bracket",
+    unexpectedEnd: () => "The formula ends too early: a value is missing",
+    unexpectedToken: ({ value }) => `Unexpected “${value}”`,
+    needSides: () => "“d” must be followed by the number of sides, e.g. d20",
+    countRange: ({ max }) => `Number of dice must be between 1 and ${max}`,
+    sidesRange: ({ max }) => `Number of sides must be between 1 and ${max}`,
+    explodeD1: () => "A d1 can't explode: the roll would never end",
+    keepRange: ({ max }) => `You can keep between 1 and ${max} dice`,
+    singleDieOnly: ({ value }) => `“${value}” works on a single die: write d20${value}`,
+    unknownModifier: ({ value }) => `Unknown modifier “${value}”`,
+    tooManyDice: ({ max }) => `Too many dice in one formula (limit ${max})`,
+    repeatRange: ({ max }) => `Repeats must be between 1 and ${max}`,
+    trailing: ({ value }) => `Unexpected text at the end: “${value}”`,
+    unknownChar: ({ value }) => `Unknown character “${value}”`,
+  } satisfies Record<DiceErrorCode, ErrorText> as Record<DiceErrorCode, ErrorText>,
+
+  settings: {
+    title: "Settings",
+    close: "Close",
+    characterName: "Character name",
+    namePlaceholderAccount: (name: string) => `default: ${name}`,
+    namePlaceholder: "e.g. Helga One-Eye",
+    color: "Colour",
+    colorNamed: (color: string) => `Colour ${color}`,
+    shuffle: "🎲 random",
+    shuffleTitle: "Random icon and colour",
+    icon: "Icon",
+    hint: "Your name, icon and colour are visible to the whole party in the roll history. Leave the name empty to use your account name.",
+    iconCredits: (authors: string) => `Icons: game-icons.net (${authors}), CC BY 3.0.`,
+    diceSet: "Dice set",
+    language: "Language",
+    showDiagnostics: "diagnostics",
+    hideDiagnostics: "hide diagnostics",
+    cancel: "Cancel",
+    save: "Save",
+  },
+
+  diceSets: {
+    standard: "Standard",
+    dcc: "DCC",
+  } as Record<string, string>,
+
+  help: {
+    title: "How to roll",
+    formulas: "Formulas",
+    notation: "Reading a roll",
+    controls: "Controls",
+    close: "Close",
+    formulaRows: [
+      ["d20", "one die; 1d20 works too"],
+      ["2d6", "several dice at once"],
+      ["2d6+3", "a die plus a modifier"],
+      ["1d20+1d5+6", "any number of dice and numbers"],
+      ["10-1d6", "subtraction"],
+      ["(1d6+2)*2", "brackets and multiplication"],
+      ["1d10/3", "division, always rounded down"],
+      ["4d6kh3", "roll 4, keep the 3 highest"],
+      ["2d20kl1", "keep the lowest; kh and kl without a number keep one"],
+      ["d20adv", "advantage: two dice, the higher counts"],
+      ["d20dis", "disadvantage: two dice, the lower counts"],
+      ["1d6!", "exploding: roll again on the maximum"],
+      ["3#1d20+5", "three separate rolls in one go"],
+      ["1d20+5 : attack", "a label after the colon, seen by the whole party"],
+    ] as Array<[string, string]>,
+    notationRows: [
+      ["[14]", "what the die rolled"],
+      ["[5, 3, (1)]", "a dropped die is in brackets"],
+      ["[6!6!2]", "explosions: the maximum came up twice"],
+    ] as Array<[string, string]>,
+    controlRows: [
+      ["die button, Enter", "roll what's in the field"],
+      ["↑ and ↓", "previous formulas, like in a terminal"],
+      ["★ by the field", "save the roll to the open tab"],
+      ["My rolls, Shared rolls", "your own rolls and ones shared with the party"],
+      ["⌃ by the dice", "collapse the dice to make room for history"],
+      ["↻ in history", "reroll, keeping the label"],
+      ["★ on a formula", "save that roll for yourself"],
+      ["✎ and × on a roll", "edit or delete; they appear on hover"],
+      ["drag and drop", "reorder saved rolls"],
+      ["settings", "character name, icon, colour, dice set, language and diagnostics"],
+    ] as Array<[string, string]>,
+    limits: (count: number, sides: number, repeat: number) =>
+      `Case doesn't matter, and spaces can go anywhere. One roll can have up to ${count} dice, up to ${sides} sides per die and up to ${repeat} repeats with #. The dice are fair: rolls come from the browser's cryptographic generator, not Math.random.`,
+  },
+
+  diag: {
+    checking: "checking…",
+    version: "Version",
+    versionValue: (version: string, built: string) => `${version}, built ${built}`,
+    connection: "Connection",
+    sdkConnected: "SDK connected",
+    sdkConnecting: "connecting",
+    sdkUnavailable: "SDK unavailable",
+    miroJs: "miro.js",
+    loaded: "loaded",
+    notLoaded: "not loaded",
+    context: "Context",
+    contextPanel: "panel in Miro",
+    contextBackground: "background frame in Miro",
+    contextTab: "regular tab",
+    hosting: "Hosting",
+    ping: "Response",
+    pingValue: (status: number, ms: number) => `${status} in ${ms} ms`,
+    pingFailed: (message: string) => `unreachable (${message})`,
+    player: "Player",
+    boardStorage: "Board storage",
+    boardLog: "Board history",
+    liveUpdates: "Live updates",
+    liveValue: (count: number) => `${count} received by subscription`,
+    liveNone: "none by subscription, history arrives by polling",
+    browserStorage: "Browser storage",
+    storageOk: "available",
+    storageNotSaving: "doesn't keep values",
+    storageBlocked: (name: string) => `blocked by the browser (${name})`,
+    cookies: "Cookies",
+    cookiesOn: "allowed",
+    cookiesOff: "blocked for third-party frames",
+    offlineCache: "Offline cache",
+    swUnsupported: "not supported by the browser",
+    swActive: "active, the panel works offline",
+    swInactive: "inactive",
+    browser: "Browser",
+    copy: "copy report",
+    copied: "copied",
+    // Значения проб доски и игрока.
+    boardNoSdk: "unavailable: no SDK",
+    boardReadFailed: (error: string) => `reading fails: ${error}`,
+    boardWriteMismatch: "writes don't stick: read back a different value",
+    boardOk: "reading and writing work",
+    boardWriteDenied: (error: string) => `writing denied: ${error}; the boards:write scope is probably missing`,
+    userNoSdk: "unknown: no SDK",
+    userNoName: (id: string) => `no name received, id ${id}`,
+    userFailed: (error: string) => `error: ${error}; the identity:read scope is probably missing`,
+    logEmpty: "empty or unavailable",
+    logValue: (count: number, user: string, time: string) => `${count} entries, last by “${user}” at ${time}`,
+  },
+
+  defaultPresets: {
+    attack: "Attack",
+    damage: "Damage",
+    save: "Save with adv.",
+    stats: "Ability score",
+  },
+}
+
+export type Strings = typeof en
+
+const ru: Strings = {
+  locale: "ru-RU",
+
+  player: {
+    fallbackName: "Вы",
+    accountFallback: "Игрок",
+    openSettings: "Имя и значок — в настройках",
+  },
+
+  status: {
+    loading: "Подключаемся к доске…",
+    offline: "Локальный режим — броски не уходят в общий журнал",
+  },
+
+  header: {
+    help: "Справка",
+    helpTitle: "Как кидать",
+    settings: "Настройки",
+  },
+
+  dice: {
+    roll: (die) => `Бросить ${die}`,
+    show: "Показать кубы",
+    hide: "Свернуть кубы",
+  },
+
+  presets: {
+    mine: "Мои броски",
+    shared: "Общие броски",
+    sharedOffline: "Общие броски доступны только на доске.",
+    emptyMine: "Пока пусто. Сохраните формулу кнопкой ★.",
+    emptyShared: "Общих бросков пока нет.",
+    edit: "Изменить бросок",
+    editNamed: (name) => `Изменить ${name}`,
+    remove: "Удалить бросок",
+    removeNamed: (name) => `Удалить ${name}`,
+    editPlaceholder: "1d8+3 : Урон основной атакой",
+    color: (color) => `Цвет ${color}`,
+    save: "Сохранить",
+    saveRoll: "Сохранить бросок",
+    cancel: "Отмена",
+    cancelEdit: "Отменить правку",
+  },
+
+  formula: {
+    label: "Формула броска",
+    placeholder: "1d20+1d5+6 : атака",
+    hint: "Enter — бросок, ↑/↓ — прошлые формулы",
+    roll: "Бросок",
+    save: "Сохранить бросок",
+  },
+
+  log: {
+    title: "История бросков",
+    empty: "Бросков ещё не было.",
+    reroll: "Перебросить",
+    rerollNamed: (formula) => `Перебросить ${formula}`,
+    save: "Сохранить",
+    saveNamed: (formula) => `Сохранить ${formula}`,
+  },
+
+  postToBoard: "дублировать броски стикером на доску",
+
+  errors: {
+    parseFailed: "Не удалось разобрать формулу",
+    presetPrefix: (name, message) => `«${name}»: ${message}`,
+    sharedOffline: "Общие броски доступны только на доске",
+    logSubscribe: (message) => `Журнал доски не подписался: ${message}`,
+    publishFailed: "Бросок не ушёл в общий журнал — откройте диагностику и проверьте хранилище доски",
+  },
+
+  diceErrors: {
+    empty: () => "Пустая формула",
+    divisionByZero: () => "Деление на ноль",
+    expectedSides: () => "Ожидалось число: число граней куба",
+    expectedKeepCount: () => "Ожидалось число: сколько кубов оставить",
+    unclosedParen: () => "Не закрыта скобка",
+    unexpectedEnd: () => "Формула обрывается — не хватает значения",
+    unexpectedToken: ({ value }) => `Здесь не ожидалось «${value}»`,
+    needSides: () => "После «d» нужно число граней, например d20",
+    countRange: ({ max }) => `Число кубов должно быть от 1 до ${max}`,
+    sidesRange: ({ max }) => `Число граней должно быть от 1 до ${max}`,
+    explodeD1: () => "Взрывные кубы невозможны на d1 — бросок никогда не закончится",
+    keepRange: ({ max }) => `Оставить можно от 1 до ${max} кубов`,
+    singleDieOnly: ({ value }) => `«${value}» применяется к одному кубу: пишите d20${value}`,
+    unknownModifier: ({ value }) => `Непонятный модификатор «${value}»`,
+    tooManyDice: ({ max }) => `Слишком много кубов в одной формуле (лимит ${max})`,
+    repeatRange: ({ max }) => `Повторов должно быть от 1 до ${max}`,
+    trailing: ({ value }) => `Лишнее в конце формулы: «${value}»`,
+    unknownChar: ({ value }) => `Непонятный символ «${value}»`,
+  },
+
+  settings: {
+    title: "Настройки",
+    close: "Закрыть",
+    characterName: "Имя персонажа",
+    namePlaceholderAccount: (name) => `по умолчанию: ${name}`,
+    namePlaceholder: "например, Хельга Одноглазая",
+    color: "Цвет",
+    colorNamed: (color) => `Цвет ${color}`,
+    shuffle: "🎲 случайно",
+    shuffleTitle: "Случайные иконка и цвет",
+    icon: "Иконка",
+    hint: "Имя, иконка и цвет видны всей партии в истории бросков. Оставьте имя пустым, чтобы вернуться к имени аккаунта.",
+    iconCredits: (authors) => `Иконки — game-icons.net (${authors}), лицензия CC BY 3.0.`,
+    diceSet: "Набор кубов",
+    language: "Язык",
+    showDiagnostics: "диагностика",
+    hideDiagnostics: "скрыть диагностику",
+    cancel: "Отмена",
+    save: "Сохранить",
+  },
+
+  diceSets: {
+    standard: "Стандартный",
+    dcc: "DCC",
+  },
+
+  help: {
+    title: "Как кидать",
+    formulas: "Формулы",
+    notation: "Разбор броска",
+    controls: "Кнопки",
+    close: "Закрыть",
+    formulaRows: [
+      ["d20", "один куб; можно писать и 1d20"],
+      ["2d6", "несколько кубов сразу"],
+      ["2d6+3", "куб и модификатор"],
+      ["1d20+1d5+6", "сколько угодно кубов и чисел"],
+      ["10-1d6", "вычитание"],
+      ["(1d6+2)*2", "скобки и умножение"],
+      ["1d10/3", "деление, всегда вниз"],
+      ["4d6kh3", "бросить 4, оставить 3 лучших"],
+      ["2d20kl1", "оставить худший; без числа kh и kl оставляют один"],
+      ["d20adv", "с преимуществом: два куба, берётся лучший"],
+      ["d20dis", "с помехой: два куба, берётся худший"],
+      ["1d6!", "взрывной: на максимуме кидается ещё раз"],
+      ["3#1d20+5", "три отдельных броска одной командой"],
+      ["1d20+5 : атака", "подпись после двоеточия, её увидит вся партия"],
+    ],
+    notationRows: [
+      ["[14]", "что выпало на кубе"],
+      ["[5, 3, (1)]", "в скобках отброшенный куб"],
+      ["[6!6!2]", "взрывы: два раза выпал максимум"],
+    ],
+    controlRows: [
+      ["кубик, Enter", "кинуть то, что в поле"],
+      ["↑ и ↓", "прошлые формулы, как в терминале"],
+      ["★ у поля", "сохранить бросок в открытую вкладку"],
+      ["Мои, Общие броски", "свои броски и общие для всей партии"],
+      ["⌃ у кубов", "свернуть кубы, чтобы освободить место истории"],
+      ["↻ в истории", "перебросить вместе с названием"],
+      ["★ на формуле", "сохранить этот бросок себе"],
+      ["✎ и × на броске", "изменить или удалить; появляются при наведении"],
+      ["перетаскивание", "менять порядок сохранённых бросков"],
+      ["настройки", "имя персонажа, значок, цвет, набор кубов, язык и диагностика"],
+    ],
+    limits: (count, sides, repeat) =>
+      `Регистр не важен, пробелы можно ставить где удобно. За раз можно кинуть до ${count} кубов, граней у куба до ${sides}, повторов через # до ${repeat}. Кубы честные: бросок берётся из криптографического генератора браузера, а не из Math.random.`,
+  },
+
+  diag: {
+    checking: "проверяем…",
+    version: "Версия",
+    versionValue: (version, built) => `${version} от ${built}`,
+    connection: "Связь",
+    sdkConnected: "SDK подключён",
+    sdkConnecting: "подключаемся",
+    sdkUnavailable: "SDK недоступен",
+    miroJs: "miro.js",
+    loaded: "загружен",
+    notLoaded: "не загружен",
+    context: "Контекст",
+    contextPanel: "панель в Miro",
+    contextBackground: "фоновый кадр в Miro",
+    contextTab: "обычная вкладка",
+    hosting: "Хостинг",
+    ping: "Отклик",
+    pingValue: (status, ms) => `${status} за ${ms} мс`,
+    pingFailed: (message) => `недоступен (${message})`,
+    player: "Игрок",
+    boardStorage: "Хранилище доски",
+    boardLog: "Журнал на доске",
+    liveUpdates: "Живые обновления",
+    liveValue: (count) => `${count} получено подпиской`,
+    liveNone: "подпиской не приходили, журнал едет опросом",
+    browserStorage: "Хранилище браузера",
+    storageOk: "доступно",
+    storageNotSaving: "не сохраняет значения",
+    storageBlocked: (name) => `заблокировано браузером (${name})`,
+    cookies: "Куки",
+    cookiesOn: "разрешены",
+    cookiesOff: "заблокированы для стороннего кадра",
+    offlineCache: "Офлайн-кэш",
+    swUnsupported: "не поддерживается браузером",
+    swActive: "активен, панель работает офлайн",
+    swInactive: "не активен",
+    browser: "Браузер",
+    copy: "скопировать отчёт",
+    copied: "скопировано",
+    boardNoSdk: "недоступно: нет SDK",
+    boardReadFailed: (error) => `чтение не работает: ${error}`,
+    boardWriteMismatch: "запись не сохраняется: прочиталось другое значение",
+    boardOk: "чтение и запись работают",
+    boardWriteDenied: (error) => `запись запрещена: ${error} — вероятно, не выдан скоуп boards:write`,
+    userNoSdk: "неизвестен: нет SDK",
+    userNoName: (id) => `имя не пришло, id ${id}`,
+    userFailed: (error) => `ошибка: ${error} — вероятно, не выдан скоуп identity:read`,
+    logEmpty: "пуст или недоступен",
+    logValue: (count, user, time) => `${count} записей, последняя от «${user}» в ${time}`,
+  },
+
+  defaultPresets: {
+    attack: "Атака",
+    damage: "Урон",
+    save: "Спасбросок с преим.",
+    stats: "Характеристика",
+  },
+}
+
+export type Lang = "en" | "ru"
+
+export const STRINGS: Record<Lang, Strings> = { en, ru }
+
+/** Названия языков всегда на своём языке: иначе не найти родной в чужом списке. */
+export const LANGS: Array<{ id: Lang; title: string }> = [
+  { id: "en", title: "English" },
+  { id: "ru", title: "Русский" },
+]
+
+export const DEFAULT_LANG: Lang = "en"
+
+export const isLang = (value: unknown): value is Lang => value === "en" || value === "ru"
+
+/** Текст ошибки формулы на языке интерфейса. */
+export const describeDiceError = (strings: Strings, error: DiceError): string =>
+  strings.diceErrors[error.code](error.params)

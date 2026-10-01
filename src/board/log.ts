@@ -1,4 +1,5 @@
 import { readKey, subscribeKey, updateKey } from "./storage"
+import type { Strings } from "../i18n/strings"
 
 export const LOG_KEY = "log"
 export const MAX_ENTRIES = 200
@@ -70,14 +71,14 @@ export const readBoardLog = async (): Promise<RollEntry[]> => {
 }
 
 /** Диагностика: что реально лежит в журнале доски прямо сейчас. */
-export const describeBoardLog = async (): Promise<string> => {
+export const describeBoardLog = async (d: Strings["diag"], locale: string): Promise<string> => {
   const stored = await readKey<RollEntry[]>(LOG_KEY)
-  if (!Array.isArray(stored)) return "пуст или недоступен"
+  if (!Array.isArray(stored)) return d.logEmpty
 
   const last = stored[stored.length - 1]
-  const when = last ? new Date(last.ts).toLocaleTimeString("ru-RU") : "—"
+  const when = last ? new Date(last.ts).toLocaleTimeString(locale) : "—"
 
-  return `${stored.length} записей, последняя от «${last?.userName ?? "?"}» в ${when}`
+  return d.logValue(stored.length, last?.userName ?? "?", when)
 }
 
 export const publishEntry = async (entry: RollEntry): Promise<boolean> => {

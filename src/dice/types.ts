@@ -1,10 +1,38 @@
+/**
+ * Что именно не так с формулой. Движок кубов не знает про языки интерфейса:
+ * он отдаёт код и подробности, а текст для игрока собирает словарь в src/i18n.
+ */
+export type DiceErrorCode =
+  | "empty"
+  | "divisionByZero"
+  | "expectedSides"
+  | "expectedKeepCount"
+  | "unclosedParen"
+  | "unexpectedEnd"
+  | "unexpectedToken"
+  | "needSides"
+  | "countRange"
+  | "sidesRange"
+  | "explodeD1"
+  | "keepRange"
+  | "singleDieOnly"
+  | "unknownModifier"
+  | "tooManyDice"
+  | "repeatRange"
+  | "trailing"
+  | "unknownChar"
+
+/** Подробности для текста ошибки: число из лимита или кусок формулы. */
+export type DiceErrorParams = { value?: string; max?: number }
+
 /** Ошибка разбора формулы: всегда с позицией, чтобы подсветить место в инпуте. */
 export class DiceError extends Error {
   constructor(
-    message: string,
+    readonly code: DiceErrorCode,
+    readonly params: DiceErrorParams = {},
     readonly pos: number = 0,
   ) {
-    super(message)
+    super(params.value ? `${code}: ${params.value}` : code)
     this.name = "DiceError"
   }
 }

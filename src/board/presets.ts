@@ -1,5 +1,6 @@
 import { readKey, subscribeKey, updateKey } from "./storage"
 import { newId } from "./log"
+import type { Strings } from "../i18n/strings"
 
 const LOCAL_KEY = "dice.presets.v1"
 const SHARED_KEY = "presets.shared"
@@ -19,11 +20,16 @@ export interface PresetBox {
 
 export const PRESET_COLORS = ["slate", "red", "amber", "green", "blue", "violet"] as const
 
-export const DEFAULT_PRESETS: Preset[] = [
-  { id: "default-attack", name: "Атака", formula: "1d20+5", color: "red" },
-  { id: "default-damage", name: "Урон", formula: "1d8+3", color: "amber" },
-  { id: "default-save", name: "Спасбросок с преим.", formula: "d20adv", color: "green" },
-  { id: "default-stats", name: "Характеристика", formula: "4d6kh3", color: "blue" },
+/**
+ * Стартовый набор для того, кто ещё ничего не сохранял. Названия берутся на
+ * языке игрока: пока набор не тронут, он не записан и пересобирается заново,
+ * так что после смены языка подписи тоже меняются.
+ */
+export const defaultPresets = (names: Strings["defaultPresets"]): Preset[] => [
+  { id: "default-attack", name: names.attack, formula: "1d20+5", color: "red" },
+  { id: "default-damage", name: names.damage, formula: "1d8+3", color: "amber" },
+  { id: "default-save", name: names.save, formula: "d20adv", color: "green" },
+  { id: "default-stats", name: names.stats, formula: "4d6kh3", color: "blue" },
 ]
 
 /** Название берётся из метки формулы и может быть пустым — тогда чип покажет
@@ -44,31 +50,33 @@ const sanitize = (items: unknown): Preset[] =>
   Array.isArray(items) ? items.filter(isPreset).map((p) => ({ ...p, color: p.color || "slate" })) : []
 
 /**
- * Переставляет бросок на место другого. Порядок уезжает в хранилище доски и
- * виден всей партии, поэтому логика вынесена сюда и покрыта тестами.
+ * Переносит бросок в промежуток между другими. index считается по списку
+ * без переносимого броска: 0 — в начало, rest.length — в конец. Именно так
+ * его видит игрок: взятый чип пропадает из ряда, а линия встаёт между
+ * оставшимися. Порядок уезжает в хранилище доски и виден всей партии,
+ * поэтому логика вынесена сюда и покрыта тестами.
  */
-export const reorderPresets = (items: Preset[], sourceId: string, targetId: string): Preset[] => {
-  if (sourceId === targetId) return items
-
+export const reorderPresets = (items: Preset[], sourceId: string, index: number): Preset[] => {
   const from = items.findIndex((item) => item.id === sourceId)
-  const to = items.findIndex((item) => item.id === targetId)
-  if (from === -1 || to === -1) return items
+  if (from === -1) return items
 
-  const next = [...items]
-  const [moved] = next.splice(from, 1)
-  next.splice(to, 0, moved as Preset)
+  const rest = items.filter((item) => item.id !== sourceId)
+  const to = Math.max(0, Math.min(index, rest.length))
+  if (to === from) return items
 
-  return next
+  return [...rest.slice(0, to), items[from] as Preset, ...rest.slice(to)]
 }
 
-export const readLocalPresets = (): { items: Preset[]; updatedAt: number; firstRun: boolean } => {
+export const readLocalPresets = (
+  names: Strings["defaultPresets"],
+): { items: Preset[]; updatedAt: number; firstRun: boolean } => {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
-    if (!raw) return { items: DEFAULT_PRESETS, updatedAt: 0, firstRun: true }
+    if (!raw) return { items: defaultPresets(names), updatedAt: 0, firstRun: true }
     const parsed = JSON.parse(raw) as PresetBox
     return { items: sanitize(parsed.items), updatedAt: parsed.updatedAt ?? 0, firstRun: false }
   } catch {
-    return { items: DEFAULT_PRESETS, updatedAt: 0, firstRun: true }
+    return { items: defaultPresets(names), updatedAt: 0, firstRun: true }
   }
 }
 

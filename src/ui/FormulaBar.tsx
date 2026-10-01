@@ -1,5 +1,6 @@
 import { useRef, useState } from "preact/hooks"
 
+import { useT } from "../i18n"
 import { DieIcon, StarIcon } from "./icons"
 
 interface Props {
@@ -20,6 +21,7 @@ export const FormulaBar = ({
   onRoll,
   onSaveCurrent,
 }: Props) => {
+  const t = useT()
   const inputRef = useRef<HTMLInputElement>(null)
   // -1 — «сейчас в поле то, что набрал игрок», иначе индекс в истории.
   const [cursor, setCursor] = useState(-1)
@@ -65,7 +67,7 @@ export const FormulaBar = ({
     <div className="rollbar">
       <div className="rollbar__row">
         <label className="sr-only" htmlFor="formula">
-          Формула броска
+          {t.formula.label}
         </label>
         <input
           id="formula"
@@ -75,25 +77,25 @@ export const FormulaBar = ({
           inputMode="text"
           autocomplete="off"
           spellcheck={false}
-          placeholder="1d20+1d5+6 : атака"
+          placeholder={t.formula.placeholder}
           value={formula}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
-          title="Enter — бросок, ↑/↓ — прошлые формулы"
+          title={t.formula.hint}
         />
         <button
           className="btn btn--compact btn--primary btn--icon"
           onClick={() => onRoll(formula)}
-          title="Бросок"
-          aria-label="Бросок"
+          title={t.formula.roll}
+          aria-label={t.formula.roll}
         >
           <DieIcon />
         </button>
         <button
           className="btn btn--compact btn--icon"
           onClick={onSaveCurrent}
-          title="Сохранить бросок"
-          aria-label="Сохранить бросок"
+          title={t.formula.save}
+          aria-label={t.formula.save}
         >
           <StarIcon />
         </button>

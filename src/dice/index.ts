@@ -2,10 +2,10 @@ import { parseFormula } from "./parse"
 import { evaluate } from "./evaluate"
 import { formatDetail } from "./format"
 import { cryptoRng, type Rng } from "./random"
-import type { RollResult, SingleRoll } from "./types"
+import { DiceError, type RollResult, type SingleRoll } from "./types"
 
 export { DiceError } from "./types"
-export type { RollResult, SingleRoll, Die, EvalNode } from "./types"
+export type { RollResult, SingleRoll, Die, EvalNode, DiceErrorCode, DiceErrorParams } from "./types"
 export { parseFormula, LIMITS } from "./parse"
 export { formatDetail, formatDicePool, formatRollLine } from "./format"
 export { cryptoRng } from "./random"
@@ -31,12 +31,12 @@ export const rollFormula = (source: string, rng: Rng = cryptoRng): RollResult =>
 }
 
 /** Проверка формулы без броска — для подсветки инпута на лету. */
-export const validateFormula = (source: string): { ok: true } | { ok: false; message: string; pos: number } => {
+export const validateFormula = (source: string): { ok: true } | { ok: false; error: DiceError } => {
   try {
     parseFormula(source)
     return { ok: true }
   } catch (error) {
-    const diceError = error as { message?: string; pos?: number }
-    return { ok: false, message: diceError.message ?? "Неверная формула", pos: diceError.pos ?? 0 }
+    if (error instanceof DiceError) return { ok: false, error }
+    throw error
   }
 }

@@ -1,4 +1,5 @@
 import { getMiro } from "./sdk"
+import type { Strings } from "../i18n/strings"
 
 /** Имя коллекции версионируем: если формат записей поменяется, старое не поедет. */
 export const COLLECTION = "dice.v1"
@@ -70,14 +71,14 @@ export const updateKey = async <T>(key: string, mutate: (current: T | undefined)
  * не глотает ошибку, а возвращает её текст — именно он и нужен, когда у игрока
  * «ничего не работает», а почему — неизвестно.
  */
-export const probeBoardStorage = async (): Promise<string> => {
+export const probeBoardStorage = async (d: Strings["diag"]): Promise<string> => {
   const collection = getCollection()
-  if (!collection) return "недоступно: нет SDK"
+  if (!collection) return d.boardNoSdk
 
   try {
     await collection.get("__probe")
   } catch (error) {
-    return `чтение не работает: ${(error as Error).name} ${(error as Error).message}`
+    return d.boardReadFailed(`${(error as Error).name} ${(error as Error).message}`)
   }
 
   // Проверяем именно запись с чтением обратно: общий журнал держится на ней,
@@ -88,10 +89,10 @@ export const probeBoardStorage = async (): Promise<string> => {
     await collection.set("__probe", stamp)
     const back = await collection.get("__probe")
 
-    if (back !== stamp) return "запись не сохраняется: прочиталось другое значение"
-    return "чтение и запись работают"
+    if (back !== stamp) return d.boardWriteMismatch
+    return d.boardOk
   } catch (error) {
-    return `запись запрещена: ${(error as Error).name} ${(error as Error).message} — вероятно, не выдан скоуп boards:write`
+    return d.boardWriteDenied(`${(error as Error).name} ${(error as Error).message}`)
   }
 }
 

@@ -1,7 +1,10 @@
+import { Fragment } from "preact"
 import { useEffect, useRef, useState } from "preact/hooks"
 
 import { validateFormula } from "../dice"
+import { describeDiceError, useT } from "../i18n"
 import { PRESET_COLORS, type Preset } from "../board/presets"
+import { LinkIcon, StarIcon } from "./icons"
 
 export type PresetScope = "mine" | "shared"
 
@@ -34,9 +37,68 @@ interface Props {
   onEdit: (preset: Preset) => void
   onRoll: (preset: Preset) => void
   onRemove: (id: string) => void
-  onReorder: (sourceId: string, targetId: string) => void
+  /** index — промежуток в списке без переносимого броска. */
+  onReorder: (sourceId: string, index: number) => void
 }
 
+/** Перетаскиваемый чип: где взяли, где указатель сейчас и куда встанет. */
+interface Drag {
+  id: string
+  startX: number
+  startY: number
+  x: number
+  y: number
+  /** Где внутри чипа его схватили: копия едет за курсором тем же местом. */
+  grabX: number
+  grabY: number
+  width: number
+  /** Ложь, пока указатель не ушёл дальше порога: до этого это ещё клик. */
+  active: boolean
+  /** Промежуток в списке без переносимого чипа, куда он встанет; null —
+   *  указатель далеко от списка, и отпущенный чип вернётся на место. */
+  index: number | null
+}
+
+/** Насколько можно увести указатель от списка, чтобы линия ещё держалась. */
+const DROP_MARGIN = 24
+
+/**
+ * Куда встанет чип, если отпустить его здесь. Ряды берём из раскладки:
+ * сначала ряд по вертикали, в нём — первый чип, чья середина правее
+ * указателя. Ниже всех рядов — в конец, а совсем в стороне от списка —
+ * никуда: перенос отменяется.
+ */
+const dropIndex = (list: HTMLElement, x: number, y: number): number | null => {
+  const area = list.getBoundingClientRect()
+  const outside =
+    x < area.left - DROP_MARGIN ||
+    x > area.right + DROP_MARGIN ||
+    y < area.top - DROP_MARGIN ||
+    y > area.bottom + DROP_MARGIN
+  if (outside) return null
+
+  const chips = [...list.querySelectorAll<HTMLElement>(".preset")]
+  const rects = chips.map((chip) => chip.getBoundingClientRect())
+
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i] as DOMRect
+    const sameRow = y >= rect.top - 3 && y <= rect.bottom + 3
+    if (!sameRow) continue
+
+    if (x < rect.left + rect.width / 2) return i
+    const next = rects[i + 1]
+    // Последний в ряду: следующий чип уже ниже, значит место — после этого.
+    if (!next || next.top > rect.bottom) return i + 1
+  }
+
+  const first = rects[0]
+  if (first && y < first.top) return 0
+  return rects.length
+}
+
+const DRAG_THRESHOLD = 5
+
+const clamp = (value: number, max: number): number => Math.max(0, Math.min(value, max))
 const POPOVER_MIN_WIDTH = 240
 const SCREEN_MARGIN = 8
 
@@ -61,8 +123,12 @@ export const Presets = ({
   onRemove,
   onReorder,
 }: Props) => {
+  const t = useT()
   const [formulaError, setFormulaError] = useState<string | null>(null)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [drag, setDrag] = useState<Drag | null>(null)
+  const dragRef = useRef<Drag | null>(null)
+  const swallowClick = useRef(false)
+  const ghostRef = useRef<HTMLSpanElement>(null)
   const [anchor, setAnchor] = useState<Anchor | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
@@ -134,7 +200,7 @@ export const Presets = ({
 
     const check = validateFormula(draft.formula)
     if (!check.ok) {
-      setFormulaError(check.message)
+      setFormulaError(describeDiceError(t, check.error))
       return
     }
 
@@ -142,6 +208,91 @@ export const Presets = ({
     setAnchor(null)
     setFormulaError(null)
   }
+
+  /*
+   * Перетаскивание на указателе, а не на HTML5 drag and drop: тот не стартует
+   * с кнопки внутри чипа в Firefox, не работает на тачскрине и в кадре Miro
+   * вёл себя непредсказуемо. Взятый чип уходит из ряда и едет копией за
+   * курсором, а между оставшимися встаёт линия — туда он и ляжет; соседи
+   * справа раздвигаются под неё.
+   */
+  const updateDrag = (next: Drag | null): void => {
+    dragRef.current = next
+    setDrag(next)
+  }
+
+  const startDrag = (preset: Preset, event: PointerEvent): void => {
+    if (event.button !== 0 || editing) return
+    // С карандаша и крестика чип не тащим — по ним жмут, а не тянут.
+    if ((event.target as HTMLElement).closest(".preset__action")) return
+
+    const chip = event.currentTarget as HTMLElement
+    const rect = chip.getBoundingClientRect()
+    const list = chip.parentElement as HTMLElement
+    dragRef.current = {
+      id: preset.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+      grabX: event.clientX - rect.left,
+      grabY: event.clientY - rect.top,
+      width: rect.width,
+      active: false,
+      index: items.findIndex((item) => item.id === preset.id),
+    }
+
+    const onMove = (move: PointerEvent): void => {
+      const current = dragRef.current
+      if (!current) return
+
+      const moved = Math.hypot(move.clientX - current.startX, move.clientY - current.startY)
+      // Порог, чтобы дрогнувшая при клике рука не превращала бросок в перенос.
+      if (!current.active && moved < DRAG_THRESHOLD) return
+
+      if (!current.active) {
+        // Выделение, начатое до порога (из-за соседнего текста), сбрасываем.
+        window.getSelection()?.removeAllRanges()
+        // Захват на список, а не на чип: чип на время переноса уходит из
+        // разметки. С захватом указатель не теряется и за краем панели —
+        // иначе отпущенная там кнопка оставляла бы перенос висеть.
+        try {
+          list.setPointerCapture(move.pointerId)
+        } catch {
+          // Синтетические события без настоящего указателя захват не дают.
+        }
+      }
+
+      // Пока чип ещё в ряду (первый кадр переноса), считаем по прежнему месту.
+      const index = current.active ? dropIndex(list, move.clientX, move.clientY) : current.index
+      updateDrag({ ...current, x: move.clientX, y: move.clientY, active: true, index })
+    }
+
+    const finish = (event: PointerEvent): void => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", finish)
+      window.removeEventListener("pointercancel", finish)
+
+      const current = dragRef.current
+      if (current?.active) {
+        // Отпускание кнопки над чипом рождает click — без этого перенос
+        // заканчивался бы ещё и броском.
+        swallowClick.current = true
+        setTimeout(() => (swallowClick.current = false), 0)
+        // Отменённый жест (pointercancel) порядок не трогает.
+        if (event.type === "pointerup" && current.index !== null) onReorder(current.id, current.index)
+      }
+      updateDrag(null)
+    }
+
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", finish)
+    window.addEventListener("pointercancel", finish)
+  }
+
+  const dragged = drag?.active ? items.find((item) => item.id === drag.id) : undefined
+  // Взятый чип уходит из ряда: остальные смыкаются, а линия показывает место.
+  const visible = dragged ? items.filter((item) => item !== dragged) : items
 
   const patch = (fields: Partial<PresetDraft>): void => {
     if (draft) onDraftChange({ ...draft, ...fields })
@@ -151,78 +302,107 @@ export const Presets = ({
   return (
     <section className="section">
       <div className="section__head">
-        <span className="section__title">Сохранённые</span>
-        <div className="tabs">
-          <button className={`tab${scope === "mine" ? " tab--active" : ""}`} onClick={() => onScopeChange("mine")}>
-            Мои
+        {/* Вкладки сами служат заголовком секции: отдельная подпись
+            «Сохранённые» над ними только повторяла то же самое. */}
+        <div className="tabs" role="tablist">
+          <button
+            className={`tab${scope === "mine" ? " tab--active" : ""}`}
+            role="tab"
+            aria-selected={scope === "mine"}
+            onClick={() => onScopeChange("mine")}
+          >
+            <StarIcon />
+            {t.presets.mine}
           </button>
-          <button className={`tab${scope === "shared" ? " tab--active" : ""}`} onClick={() => onScopeChange("shared")}>
-            Общие
+          <button
+            className={`tab${scope === "shared" ? " tab--active" : ""}`}
+            role="tab"
+            aria-selected={scope === "shared"}
+            onClick={() => onScopeChange("shared")}
+          >
+            <LinkIcon />
+            {t.presets.shared}
           </button>
         </div>
       </div>
 
       {locked ? (
-        <div className="empty">Общие броски доступны только на доске.</div>
+        <div className="empty">{t.presets.sharedOffline}</div>
       ) : items.length === 0 ? (
-        <div className="empty">
-          {scope === "mine" ? "Пока пусто. Сохраните формулу кнопкой ★." : "Общих бросков пока нет."}
-        </div>
+        <div className="empty">{scope === "mine" ? t.presets.emptyMine : t.presets.emptyShared}</div>
       ) : (
-        <div className="presets">
-          {items.map((preset) => (
-            <span
-              key={preset.id}
-              className={`preset${draggingId === preset.id ? " preset--dragging" : ""}${
-                draft?.id === preset.id ? " preset--editing" : ""
-              }`}
-              style={{ "--chip": `var(--chip-${draft?.id === preset.id ? draft.color : preset.color})` }}
-              draggable
-              onDragStart={(event) => {
-                setDraggingId(preset.id)
-                event.dataTransfer?.setData("text/plain", preset.id)
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault()
-                const source = draggingId ?? event.dataTransfer?.getData("text/plain")
-                if (source) onReorder(source, preset.id)
-                setDraggingId(null)
-              }}
-              onDragEnd={() => setDraggingId(null)}
-            >
-              <button className="preset__name" onClick={() => onRoll(preset)}>
-                <span className="preset__formula">{preset.formula}</span>
-                {preset.name && (
-                  <span className="preset__label" title={preset.name}>
-                    {preset.name}
-                  </span>
-                )}
-              </button>
+        <div
+          className={`presets${drag?.active ? " presets--dragging" : ""}`}
+          onClickCapture={(event) => {
+            if (!swallowClick.current) return
+            event.stopPropagation()
+            event.preventDefault()
+          }}
+        >
+          {visible.map((preset, position) => (
+            <Fragment key={preset.id}>
+              {drag?.active && drag.index === position && <span className="preset-drop" aria-hidden="true" />}
+              <span
+                data-id={preset.id}
+                className={`preset${draft?.id === preset.id ? " preset--editing" : ""}`}
+                style={{ "--chip": `var(--chip-${draft?.id === preset.id ? draft.color : preset.color})` }}
+                onPointerDown={(event) => startDrag(preset, event as unknown as PointerEvent)}
+              >
+                <button className="preset__name" onClick={() => onRoll(preset)}>
+                  <span className="preset__formula">{preset.formula}</span>
+                  {preset.name && (
+                    <span className="preset__label" title={preset.name}>
+                      {preset.name}
+                    </span>
+                  )}
+                </button>
 
-              {/* Карандаш и крестик всплывают по наведению: постоянно они
+                {/* Карандаш и крестик всплывают по наведению: постоянно они
                   съедали половину ширины чипа. */}
-              <span className="preset__actions">
-                <button
-                  className="preset__action"
-                  onClick={(event) => startEdit(preset, event as unknown as MouseEvent)}
-                  title="Изменить бросок"
-                  aria-label={`Изменить ${preset.name || preset.formula}`}
-                >
-                  ✎
-                </button>
-                <button
-                  className="preset__action"
-                  onClick={() => onRemove(preset.id)}
-                  title="Удалить бросок"
-                  aria-label={`Удалить ${preset.name || preset.formula}`}
-                >
-                  ×
-                </button>
+                <span className="preset__actions">
+                  <button
+                    className="preset__action"
+                    onClick={(event) => startEdit(preset, event as unknown as MouseEvent)}
+                    title={t.presets.edit}
+                    aria-label={t.presets.editNamed(preset.name || preset.formula)}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="preset__action"
+                    onClick={() => onRemove(preset.id)}
+                    title={t.presets.remove}
+                    aria-label={t.presets.removeNamed(preset.name || preset.formula)}
+                  >
+                    ×
+                  </button>
+                </span>
               </span>
-            </span>
+            </Fragment>
           ))}
+          {drag?.active && drag.index !== null && drag.index >= visible.length &&<span className="preset-drop" aria-hidden="true" />}
         </div>
+      )}
+
+      {/* Копия взятого чипа едет за курсором поверх всей панели. */}
+      {drag && dragged && (
+        <span
+          ref={ghostRef}
+          className="preset preset--ghost"
+          aria-hidden="true"
+          style={{
+            "--chip": `var(--chip-${dragged.color})`,
+            // Копия не выезжает за край панели: за ним её обрезал бы кадр Miro.
+            left: `${clamp(drag.x - drag.grabX, window.innerWidth - drag.width)}px`,
+            top: `${clamp(drag.y - drag.grabY, window.innerHeight - (ghostRef.current?.offsetHeight ?? 0))}px`,
+            width: `${drag.width}px`,
+          }}
+        >
+          <span className="preset__name">
+            <span className="preset__formula">{dragged.formula}</span>
+            {dragged.name && <span className="preset__label">{dragged.name}</span>}
+          </span>
+        </span>
       )}
 
       {/*
@@ -241,7 +421,7 @@ export const Presets = ({
             ref={inputRef}
             className={`input preset-edit__input${formulaError ? " input--invalid" : ""}`}
             value={draft.formula}
-            placeholder="1d8+3 : Урон основной атакой"
+            placeholder={t.presets.editPlaceholder}
             autocomplete="off"
             spellcheck={false}
             onInput={(event) => patch({ formula: (event.target as HTMLInputElement).value })}
@@ -258,17 +438,22 @@ export const Presets = ({
                   className={`color${draft.color === item ? " color--active" : ""}`}
                   style={{ "--chip": `var(--chip-${item})` }}
                   onClick={() => patch({ color: item })}
-                  aria-label={`Цвет ${item}`}
+                  aria-label={t.presets.color(item)}
                 />
               ))}
             </span>
 
             <span className="section__spacer" />
 
-            <button className="preset__action" onClick={submit} title="Сохранить" aria-label="Сохранить бросок">
+            <button className="preset__action" onClick={submit} title={t.presets.save} aria-label={t.presets.saveRoll}>
               ✓
             </button>
-            <button className="preset__action" onClick={close} title="Отмена" aria-label="Отменить правку">
+            <button
+              className="preset__action"
+              onClick={close}
+              title={t.presets.cancel}
+              aria-label={t.presets.cancelEdit}
+            >
               ×
             </button>
           </div>

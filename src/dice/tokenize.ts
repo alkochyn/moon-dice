@@ -73,7 +73,7 @@ export const tokenize = (input: string): Token[] => {
       continue
     }
 
-    throw new DiceError(`Непонятный символ «${ch}»`, i)
+    throw new DiceError("unknownChar", { value: ch }, i)
   }
 
   tokens.push({ type: "eof", value: "", pos: input.length })

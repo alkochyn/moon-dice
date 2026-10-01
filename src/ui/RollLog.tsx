@@ -1,4 +1,5 @@
 import type { RollEntry } from "../board/log"
+import { useT } from "../i18n"
 import { Avatar } from "./Avatar"
 import { RepeatIcon, StarIcon } from "./icons"
 
@@ -10,9 +11,10 @@ interface Props {
   onSave: (entry: RollEntry) => void
 }
 
-const time = (ts: number): string => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+const time = (ts: number, locale: string): string =>
+  new Date(ts).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
 
-const fullTime = (ts: number): string => new Date(ts).toLocaleString("ru-RU")
+const fullTime = (ts: number, locale: string): string => new Date(ts).toLocaleString(locale)
 
 /* Расклад под суммой, если он что-то добавляет: у одного куба без
    модификаторов он повторял бы сумму — «7» и «[7]». */
@@ -23,14 +25,17 @@ const Detail = ({ result }: { result: { total: number; detail: string } }) =>
     </span>
   )
 
-export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => (
+export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => {
+  const t = useT()
+
+  return (
   <section className="section section--log">
     <div className="section__head">
-      <span className="section__title">История бросков</span>
+      <span className="section__title">{t.log.title}</span>
     </div>
 
     {entries.length === 0 ? (
-      <div className="empty">Бросков ещё не было.</div>
+      <div className="empty">{t.log.empty}</div>
     ) : (
       <div className="log">
         {entries.map((entry) => {
@@ -64,16 +69,16 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                       <button
                         className="entry__action"
                         onClick={() => onRepeat(entry)}
-                        aria-label={`Перебросить ${entry.expression}`}
-                        title="Перебросить"
+                        aria-label={t.log.rerollNamed(entry.expression)}
+                        title={t.log.reroll}
                       >
                         <RepeatIcon />
                       </button>
                       <button
                         className="entry__action"
                         onClick={() => onSave(entry)}
-                        aria-label={`Сохранить ${entry.expression}`}
-                        title="Сохранить"
+                        aria-label={t.log.saveNamed(entry.expression)}
+                        title={t.log.save}
                       >
                         <StarIcon />
                       </button>
@@ -95,8 +100,8 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
                 )}
 
                 {/* Время у всех карточек в левом нижнем углу, под броском. */}
-                <span className="entry__time" title={fullTime(entry.ts)}>
-                  {time(entry.ts)}
+                <span className="entry__time" title={fullTime(entry.ts, t.locale)}>
+                  {time(entry.ts, t.locale)}
                 </span>
               </div>
 
@@ -114,4 +119,5 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
       </div>
     )}
   </section>
-)
+  )
+}

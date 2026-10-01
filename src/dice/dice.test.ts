@@ -143,8 +143,8 @@ describe("ошибки разбора", () => {
     const result = validateFormula("1d20+")
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.message).toMatch(/обрыв|не хватает/i)
-      expect(result.pos).toBe(5)
+      expect(result.error.code).toBe("unexpectedEnd")
+      expect(result.error.pos).toBe(5)
     }
   })
 
@@ -155,15 +155,15 @@ describe("ошибки разбора", () => {
   it("показывает эмодзи в сообщении целиком, а не половину суррогатной пары", () => {
     const result = validateFormula("🙏")
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.message).toContain("🙏")
+    if (!result.ok) expect(result.error.params.value).toBe("🙏")
   })
 
   it("не спотыкается об эмодзи в середине формулы", () => {
     const result = validateFormula("1d20+🎲")
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.message).toContain("🎲")
-      expect(result.pos).toBe(5)
+      expect(result.error.params.value).toBe("🎲")
+      expect(result.error.pos).toBe(5)
     }
   })
 })

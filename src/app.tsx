@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 
 import "./styles.css"
 import { DiceError, parseFormula, rollFormula } from "./dice"
+import { DEFAULT_LANG, LangContext, STRINGS, describeDiceError, isLang, type Lang } from "./i18n"
 import { DEFAULT_DICE_SET } from "./data/diceSets"
 import { ensureSdk, getCurrentUser, watchLateSdk, type BoardStatus, type BoardUser } from "./board/sdk"
 import {
@@ -16,6 +17,7 @@ import {
   type RollEntry,
 } from "./board/log"
 import {
+  defaultPresets,
   makePreset,
   pushPersonalPresets,
   reorderPresets,
@@ -31,6 +33,7 @@ import {
 import { postRollToBoard } from "./board/post"
 import { StatusBar } from "./ui/StatusBar"
 import { DiceBar } from "./ui/DiceBar"
+import { PlayerBar } from "./ui/PlayerBar"
 import { FormulaBar } from "./ui/FormulaBar"
 import { Presets, type PresetDraft, type PresetScope } from "./ui/Presets"
 import { RollLog } from "./ui/RollLog"
@@ -45,6 +48,7 @@ const DICE_SET_KEY = "dice.set.v1"
 const DICE_COLLAPSED_KEY = "dice.collapsed.v1"
 const CHARACTER_KEY = "dice.character.v1"
 const LOOK_KEY = "dice.look.v1"
+const LANG_KEY = "dice.lang.v1"
 const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
 const POLL_INTERVAL_MS = 4000
@@ -64,6 +68,17 @@ const writeJson = (key: string, value: unknown): void => {
   } catch {
     // Хранилище может быть недоступно — работаем из памяти.
   }
+}
+
+/**
+ * Язык читаем сразу, ещё до первой отрисовки, иначе панель мигнула бы чужим
+ * языком. Если игрок ещё не выбирал, берём язык браузера: своя русская партия
+ * так и остаётся на русском, остальные получают английский.
+ */
+const initialLang = (): Lang => {
+  const saved = readJson<unknown>(LANG_KEY, null)
+  if (isLang(saved)) return saved
+  return navigator.language?.toLowerCase().startsWith("ru") ? "ru" : DEFAULT_LANG
 }
 
 /** Пока доска не отвечает, броски всё равно должны подписываться кем-то стабильным. */
@@ -99,6 +114,8 @@ export const App = () => {
   const [look, setLook] = useState<{ icon?: string; color?: string }>({})
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [lang, setLang] = useState<Lang>(initialLang)
+  const t = STRINGS[lang]
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
@@ -106,6 +123,7 @@ export const App = () => {
   const anonId = useRef<string>("")
   const characterRef = useRef("")
   const lookRef = useRef<{ icon: string; color: string }>({ icon: "", color: "" })
+  const tRef = useRef(t)
 
   const playerId = user?.id ?? anonId.current
   // Пока игрок не выбрал внешность, она выводится из его id: у каждого сразу
@@ -118,6 +136,11 @@ export const App = () => {
   postToBoardRef.current = postToBoard
   characterRef.current = character
   lookRef.current = { icon: playerIcon, color: playerColor }
+  tRef.current = t
+
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
 
   // Локальное состояние поднимаем сразу: панель обязана быть рабочей ещё до
   // того, как выяснится, доехал ли SDK.
@@ -131,7 +154,7 @@ export const App = () => {
     setCharacter(readJson<string>(CHARACTER_KEY, ""))
     setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
 
-    const local = readLocalPresets()
+    const local = readLocalPresets(tRef.current.defaultPresets)
     setPersonal({ updatedAt: local.updatedAt, items: local.items })
   }, [])
 
@@ -177,7 +200,7 @@ export const App = () => {
 
     const stopLog = subscribeBoardLog(
       applyBoardEntries,
-      (message) => setShareError(`Журнал доски не подписался: ${message}`),
+      (message) => setShareError(tRef.current.errors.logSubscribe(message)),
     )
     const stopPresets = subscribeSharedPresets(setShared)
     void readSharedPresets().then(setShared)
@@ -240,10 +263,11 @@ export const App = () => {
       try {
         result = rollFormula(source)
       } catch (failure) {
-        const message = failure instanceof DiceError ? failure.message : "Не удалось разобрать формулу"
+        const strings = tRef.current
+        const message = failure instanceof DiceError ? describeDiceError(strings, failure) : strings.errors.parseFailed
         // Без имени пресета ошибка висит под полем ввода и выглядит так, будто
         // сломано то, что игрок печатал, а не то, по чему он кликнул.
-        setError(presetName ? `«${presetName}»: ${message}` : message)
+        setError(presetName ? strings.errors.presetPrefix(presetName, message) : message)
         return
       }
       setError(null)
@@ -253,7 +277,7 @@ export const App = () => {
         id: newId(),
         ts: Date.now(),
         userId: user?.id ?? anonId.current,
-        userName: characterRef.current || user?.name || "Вы",
+        userName: characterRef.current || user?.name || tRef.current.player.fallbackName,
         icon: lookRef.current.icon,
         color: lookRef.current.color,
         expression: result.expression,
@@ -274,7 +298,7 @@ export const App = () => {
         // обязана быть видна игроку, а не теряться в молчаливом ретрае.
         void publishEntry(entry).then((published) => {
           setShareError(
-            published ? null : "Бросок не ушёл в общий журнал — откройте диагностику и проверьте хранилище доски",
+            published ? null : tRef.current.errors.publishFailed,
           )
         })
         if (postToBoardRef.current) {
@@ -306,13 +330,15 @@ export const App = () => {
       try {
         parsed = parseFormula(trimmed)
       } catch (failure) {
-        setError(failure instanceof DiceError ? failure.message : "Не удалось разобрать формулу")
+        setError(
+          failure instanceof DiceError ? describeDiceError(tRef.current, failure) : tRef.current.errors.parseFailed,
+        )
         return
       }
 
       // Бросок уходит в открытую вкладку: на «Общие» сразу всей партии.
       if (scope === "shared" && statusRef.current !== "connected") {
-        setError("Общие броски доступны только на доске")
+        setError(tRef.current.errors.sharedOffline)
         return
       }
 
@@ -386,9 +412,9 @@ export const App = () => {
   }, [])
 
   const reorderPreset = useCallback(
-    (sourceId: string, targetId: string) => {
-      if (scope === "mine") savePersonal(reorderPresets(personalRef.current.items, sourceId, targetId))
-      else saveShared(reorderPresets(shared, sourceId, targetId))
+    (sourceId: string, index: number) => {
+      if (scope === "mine") savePersonal(reorderPresets(personalRef.current.items, sourceId, index))
+      else saveShared(reorderPresets(shared, sourceId, index))
     },
     [savePersonal, saveShared, scope, shared],
   )
@@ -396,6 +422,14 @@ export const App = () => {
   const changeDiceSet = useCallback((id: string) => {
     setDiceSet(id)
     writeJson(DICE_SET_KEY, id)
+  }, [])
+
+  const changeLang = useCallback((next: Lang) => {
+    setLang(next)
+    writeJson(LANG_KEY, next)
+    // Нетронутый стартовый набор нигде не записан — переводим и его, иначе
+    // после смены языка в панели остались бы подписи на прежнем.
+    setPersonal((box) => (box.updatedAt === 0 ? { ...box, items: defaultPresets(STRINGS[next].defaultPresets) } : box))
   }, [])
 
   const toggleDiceCollapsed = useCallback(() => {
@@ -411,7 +445,17 @@ export const App = () => {
   }, [])
 
   return (
+    <LangContext.Provider value={t}>
     <div className="app">
+      <PlayerBar
+        name={character || user?.name || t.player.fallbackName}
+        userId={playerId}
+        icon={playerIcon}
+        color={playerColor}
+        onOpenHelp={() => setHelpOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
       <StatusBar status={status} />
 
       {shareError && <div className="warning">{shareError}</div>}
@@ -419,11 +463,8 @@ export const App = () => {
       <DiceBar
         diceSet={diceSet}
         collapsed={diceCollapsed}
-        onDiceSetChange={changeDiceSet}
         onToggleCollapsed={toggleDiceCollapsed}
         onRoll={roll}
-        onOpenHelp={() => setHelpOpen(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <Presets
@@ -457,8 +498,12 @@ export const App = () => {
           icon={playerIcon}
           color={playerColor}
           status={status}
+          diceSet={diceSet}
+          lang={lang}
           {...(user ? { accountName: user.name } : {})}
           onSave={savePlayerLook}
+          onDiceSetChange={changeDiceSet}
+          onLangChange={changeLang}
           onClose={() => setSettingsOpen(false)}
         />
       )}
@@ -482,8 +527,9 @@ export const App = () => {
           disabled={status !== "connected"}
           onChange={(event) => togglePostToBoard((event.target as HTMLInputElement).checked)}
         />
-        дублировать броски стикером на доску
+        {t.postToBoard}
       </label>
     </div>
+    </LangContext.Provider>
   )
 }

@@ -1,3 +1,5 @@
+import type { Strings } from "../i18n/strings"
+
 /**
  * Мост к Miro Web SDK.
  *
@@ -101,16 +103,16 @@ export interface BoardUser {
  * identity:read — без него вызов падает, броски подписываются «Вы», и по
  * молчаливому null это не выяснить.
  */
-export const probeUser = async (): Promise<string> => {
+export const probeUser = async (d: Strings["diag"]): Promise<string> => {
   const sdk = getMiro()
-  if (!sdk) return "неизвестен: нет SDK"
+  if (!sdk) return d.userNoSdk
 
   try {
     const info = await sdk.board.getUserInfo()
-    if (!info?.name) return `имя не пришло, id ${info?.id ?? "нет"}`
+    if (!info?.name) return d.userNoName(info?.id ?? "—")
     return `${info.name} (id ${info.id})`
   } catch (error) {
-    return `ошибка: ${(error as Error).name} ${(error as Error).message} — вероятно, не выдан скоуп identity:read`
+    return d.userFailed(`${(error as Error).name} ${(error as Error).message}`)
   }
 }
 
@@ -120,7 +122,9 @@ export const getCurrentUser = async (): Promise<BoardUser | null> => {
 
   try {
     const info = await sdk.board.getUserInfo()
-    return { id: info.id, name: info.name || "Игрок" }
+    // Пустое имя оставляем пустым: подпись по умолчанию подставит панель
+    // на языке игрока.
+    return { id: info.id, name: info.name ?? "" }
   } catch {
     return null
   }
