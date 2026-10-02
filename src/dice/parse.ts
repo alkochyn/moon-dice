@@ -198,9 +198,17 @@ class Parser {
   }
 }
 
+/**
+ * «в» стоит на той же клавише, что d: `1в20` — это `1d20`, набранный без
+ * переключения раскладки. Меняем только в формуле, подпись после двоеточия
+ * не трогаем. В журнал уходит уже латиница, чтобы бросок повторили и панели,
+ * которые про «в» не знают. Длина строки та же — позиции ошибок не съезжают.
+ */
+const latinizeDice = (expression: string): string => expression.replace(/[вВ]/g, "d")
+
 export const parseFormula = (source: string): ParsedFormula => {
   const colon = source.indexOf(":")
-  const rawExpression = (colon === -1 ? source : source.slice(0, colon)).trim()
+  const rawExpression = latinizeDice((colon === -1 ? source : source.slice(0, colon)).trim())
   const rawLabel = colon === -1 ? "" : source.slice(colon + 1).trim()
 
   if (!rawExpression) {

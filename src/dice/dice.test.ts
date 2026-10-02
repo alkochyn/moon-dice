@@ -118,6 +118,34 @@ describe("повторы и метки", () => {
   })
 })
 
+describe("русская раскладка", () => {
+  it("читает «в» как d и отдаёт формулу уже латиницей", () => {
+    const result = roll("2в6+1в20 : атака", 3, 4, 15)
+    expect(result.expression).toBe("2d6+1d20")
+    expect(result.rolls[0]!.total).toBe(22)
+  })
+
+  it("понимает заглавную «В» и куб без числа", () => {
+    expect(roll("В20", 7).expression).toBe("d20")
+  })
+
+  it("не трогает «в» в подписи", () => {
+    expect(roll("1в20 : взлом в подвале", 5).label).toBe("взлом в подвале")
+  })
+
+  it("держит позицию ошибки там же, где у латиницы", () => {
+    const failAt = (formula: string): number => {
+      try {
+        roll(formula, 1)
+      } catch (error) {
+        return (error as DiceError).pos
+      }
+      throw new Error(`${formula} не упала`)
+    }
+    expect(failAt("2в6+1вв6")).toBe(failAt("2d6+1dd6"))
+  })
+})
+
 describe("ошибки разбора", () => {
   const bad: Array<[string, string]> = [
     ["", "пустая формула"],
