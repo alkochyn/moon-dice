@@ -8,7 +8,19 @@ import type { BoardStatus } from "../../board/sdk"
 import { findDiceSet } from "../../data/diceSets"
 import { parseFormula, validateFormula } from "../../dice"
 import { useT } from "../../i18n"
-import { AsciiFire, bigNumber, dieArt, naturalOf, rollArtOf, skullArt, SWORD, type Natural, type RollArt } from "./ascii"
+import {
+  AsciiFire,
+  artLayout,
+  bigNumber,
+  dieArt,
+  naturalOf,
+  rollArtOf,
+  skullArt,
+  SWORD,
+  type AsciiDie,
+  type Natural,
+  type RollArt,
+} from "./ascii"
 import { SavedRolls } from "./SavedRolls"
 
 const SCREEN_KEY = "dice.term.screen.v1"
@@ -109,16 +121,22 @@ const Fire = ({ token, onDone }: { token: number; onDone: () => void }) => {
   )
 }
 
-/** Череп на натуральной 1: клацает челюстью, пока token свежий. */
-const Skull = ({ token, onClick, label }: { token: number; onClick: () => void; label: string }) => {
+/**
+ * Череп на натуральной 1: на пару секунд ложится поверх d20 и клацает
+ * челюстью, потом исчезает — под ним остаётся сам куб с единицей.
+ */
+const Skull = ({ token }: { token: number }) => {
   const [chatter, setChatter] = useState(false)
+  const [visible, setVisible] = useState(Boolean(token))
 
   useEffect(() => {
     if (!token) return undefined
+    setVisible(true)
     const start = Date.now()
     const timer = setInterval(() => {
       if (Date.now() - start > RATTLE_MS) {
         clearInterval(timer)
+        setVisible(false)
         setChatter(false)
         return
       }
@@ -127,11 +145,11 @@ const Skull = ({ token, onClick, label }: { token: number; onClick: () => void; 
     return () => clearInterval(timer)
   }, [token])
 
-  return (
-    <button className="term-egg term-skull" onClick={onClick} aria-label={label} title={label}>
-      <pre>{skullArt(chatter)}</pre>
-    </button>
-  )
+  return visible ? (
+    <pre className="term-skull" aria-hidden="true">
+      {skullArt(chatter)}
+    </pre>
+  ) : null
 }
 
 interface EntryView {
@@ -530,9 +548,6 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
   const rowRef = useRef<HTMLDivElement>(null)
   const artRef = useRef<HTMLDivElement>(null)
   const sumRef = useRef<HTMLDivElement>(null)
-  // Сумму меряем вместе с картинкой: при ней под суммой стоит разбор, и
-  // колонка шире, чем при тексте. Мерить её в текстовом виде — значит решить,
-  // что картинка влезает, вернуть её и тут же обрезать.
   const measured = useRef<{ art: number; sum: number } | null>(null)
   const [fits, setFits] = useState(true)
   useLayoutEffect(() => {
@@ -546,6 +561,7 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
     setFits(measured.current.art <= room)
   }, [width, drawable])
   const drawn = drawable && fits ? drawable : null
+  const naturalIndex = natural && drawn ? drawn.dice.findIndex((die) => die.sides === 20 && die.kept) : -1
   const what = initiative ? t.combat.title : entry.expression
   const label = initiative ? undefined : entry.label
 
@@ -603,47 +619,57 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
           <div className="term-entry__dice">
             {drawn ? (
               <div ref={artRef} className="term-entry__art">
-                {drawn.dice.map((die, index) => (
-                  <Fragment key={index}>
-                    {(index > 0 || die.sign < 0) && <span className="term-entry__op">{die.sign < 0 ? "-" : "+"}</span>}
-                    <pre className={`term-die${die.kept ? "" : " term-die--dropped"}`}>{dieArt(die)}</pre>
-                    {/* Череп — сразу за тем d20, что выпал единицей. */}
-                    {natural === "fumble" && die.sides === 20 && die.kept && (
-                      <Skull token={rattleToken} onClick={onRattle} label={t.term.rattle} />
-                    )}
-                  </Fragment>
-                ))}
-                {drawn.modifier !== 0 && (
-                  <>
-                    <span className="term-entry__op">{drawn.modifier < 0 ? "-" : "+"}</span>
-                    <span className="term-entry__mod">{Math.abs(drawn.modifier)}</span>
-                  </>
-                )}
+                {artLayout(drawn).map((item, position) => {
+                  if (item.kind === "op") {
+                    return (
+                      <span key={position} className="term-entry__op">
+                        {item.sign}
+                      </span>
+                    )
+                  }
+                  if (item.kind === "mod") {
+                    return (
+                      <pre key={position} className="term-entry__mod">
+                        {bigNumber(item.value)}
+                      </pre>
+                    )
+                  }
+
+                  const die = drawn.dice[item.index] as AsciiDie
+                  const picture = <pre className={`term-die${die.kept ? "" : " term-die--dropped"}`}>{dieArt(die)}</pre>
+                  if (item.index !== naturalIndex) return <Fragment key={position}>{picture}</Fragment>
+
+                  // Тот самый d20 — кнопка: клик повторяет меч с огнём или череп.
+                  const replay = natural === "crit" ? t.term.relight : t.term.rattle
+                  return (
+                    <button
+                      key={position}
+                      className="term-egg term-entry__natural"
+                      onClick={natural === "crit" ? onIgnite : onRattle}
+                      aria-label={replay}
+                      title={replay}
+                    >
+                      {picture}
+                      {natural === "fumble" && <Skull token={rattleToken} />}
+                    </button>
+                  )
+                })}
               </div>
             ) : (
-              <>
-                <span className="term-entry__detail">{single.detail}</span>
-                {natural === "fumble" && <Skull token={rattleToken} onClick={onRattle} label={t.term.rattle} />}
-              </>
-            )}
-          </div>
-          {/* Меч выезжает слева, из-за кубов, в пустоту перед суммой. Ключ по
-              токену огня перезапускает анимацию на каждом поджиге. */}
-          {natural === "crit" && (
-            <button className="term-egg term-entry__sword" onClick={onIgnite} aria-label={t.term.relight} title={t.term.relight}>
-              <span className="term-sword__track">
-                <pre key={burnToken} className={`term-sword${burnToken ? " term-sword--draw" : ""}`}>
-                  {SWORD}
-                </pre>
-              </span>
-              <span className="term-sword__label">{t.term.nat20}</span>
-            </button>
-          )}
-          <div ref={sumRef} className="term-entry__sum">
-            <pre className="term-entry__big">{bigNumber(single.total)}</pre>
-            {drawn && single.detail !== String(single.total) && single.detail !== `[${single.total}]` && (
               <span className="term-entry__detail">{single.detail}</span>
             )}
+          </div>
+          {/* Меч выезжает слева поверх кубов, пока горит огонь, и уходит вместе
+              с ним. Ключ по токену перезапускает анимацию на каждом поджиге. */}
+          {natural === "crit" && burnToken ? (
+            <div className="term-sword__track" aria-hidden="true">
+              <pre key={burnToken} className="term-sword">
+                {SWORD}
+              </pre>
+            </div>
+          ) : null}
+          <div ref={sumRef} className="term-entry__sum">
+            <pre className="term-entry__big">{bigNumber(single.total)}</pre>
           </div>
         </div>
       )}

@@ -95,6 +95,33 @@ export const rollArtOf = (expression: string, detail: string): RollArt | null =>
   return { dice, modifier: tree.modifier, linear: tree.linear }
 }
 
+export type ArtItem = { kind: "op"; sign: "+" | "-" } | { kind: "die"; index: number } | { kind: "mod"; value: number }
+
+/**
+ * Порядок картинки: кубы как в формуле, модификатор в конце — `[d20] + [d4]
+ * + 6`. Минус перед первым кубом выглядит как обрывок, поэтому, если первый
+ * куб вычитается, а модификатор положительный, модификатор встаёт вперёд:
+ * `4-1d20+4+1d5+2` — это `10 - [d20] + [d5]`. Знак у самого куба при этом не
+ * теряется: без него картинка врала бы.
+ */
+export const artLayout = (art: RollArt): ArtItem[] => {
+  const items: ArtItem[] = []
+  const leadingMinus = art.dice[0]?.sign === -1
+  const modFirst = leadingMinus && art.modifier > 0
+  const push = (sign: 1 | -1, item: ArtItem): void => {
+    if (items.length > 0 || sign < 0) items.push({ kind: "op", sign: sign < 0 ? "-" : "+" })
+    items.push(item)
+  }
+
+  if (modFirst) push(1, { kind: "mod", value: art.modifier })
+  art.dice.forEach((die, index) => push(die.sign, { kind: "die", index }))
+  if (!modFirst && art.modifier !== 0) {
+    push(art.modifier < 0 ? -1 : 1, { kind: "mod", value: Math.abs(art.modifier) })
+  }
+
+  return items
+}
+
 /** Только кубы — для натуральных 20 и 1, им знаки и модификатор не важны. */
 export const diceOf = (expression: string, detail: string): AsciiDie[] | null =>
   rollArtOf(expression, detail)?.dice ?? null
@@ -175,7 +202,8 @@ export const SWORD = ["    /", "O===[====================-", "    \\"].join("\n"
 /** Череп на натуральной 1; в «клацающем» кадре другие глаза и зубы. */
 export const skullArt = (chatter: boolean): string => {
   const eyes = chatter ? "@@ @@" : "() ()"
-  return ["  _____", " /     \\", `| ${eyes} |`, " \\  ^  /", chatter ? "  |'|'|" : "  |||||"].join("\n")
+  // Ровно 7×5, как рамка куба: череп ложится поверх d20 и закрывает его целиком.
+  return [" _____ ", "/     \\", `|${eyes}|`, " \\ ^ / ", chatter ? " |'|'| " : " ||||| "].join("\n")
 }
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { rollFormula, type Rng } from "../../dice"
-import { AsciiFire, bigNumber, dieArt, diceOf, naturalOf, rollArtOf, skullArt } from "./ascii"
+import { AsciiFire, artLayout, bigNumber, dieArt, diceOf, naturalOf, rollArtOf, skullArt, type ArtItem } from "./ascii"
 
 const seq = (...values: number[]): Rng => {
   let i = 0
@@ -80,6 +80,38 @@ describe("кубы и модификатор для рисунка", () => {
   })
 })
 
+describe("порядок картинки", () => {
+  const show = (formula: string, ...values: number[]): string => {
+    const { expression, detail } = logged(formula, ...values)
+    const art = rollArtOf(expression, detail)!
+    return artLayout(art)
+      .map((item: ArtItem) =>
+        item.kind === "op" ? item.sign : item.kind === "mod" ? String(item.value) : `[d${art.dice[item.index]!.sides}]`,
+      )
+      .join(" ")
+  }
+
+  it("кубы как в формуле, модификатор в конце", () => {
+    expect(show("1d20+1+1d4+5", 12, 3)).toBe("[d20] + [d4] + 6")
+  })
+
+  it("без модификатора нет хвоста «+ 0»", () => {
+    expect(show("2d6", 3, 4)).toBe("[d6] + [d6]")
+  })
+
+  it("при вычитаемом первом кубе ставит модификатор вперёд", () => {
+    expect(show("4-1d20+4+1d5+2", 7, 3)).toBe("10 - [d20] + [d5]")
+  })
+
+  it("отрицательный модификатор — минусом в конце", () => {
+    expect(show("1d20-3", 9)).toBe("[d20] - 3")
+  })
+
+  it("оставляет минус, только когда без него никак", () => {
+    expect(show("-1d6-2", 4)).toBe("- [d6] - 2")
+  })
+})
+
 describe("натуральные 20 и 1", () => {
   it("ловит 20 и 1 на одиночном d20 с модификатором", () => {
     expect(naturalOf(dice("1d20+5", 20))).toBe("crit")
@@ -120,9 +152,11 @@ describe("рисунки", () => {
     expect(bigNumber(-12).split("\n")).toEqual(["         _ ", " _    |  _|", "      | |_ "])
   })
 
-  it("держит череп одной ширины в обоих кадрах", () => {
+  it("рисует череп ровно по рамке куба в обоих кадрах", () => {
     const widths = (art: string) => art.split("\n").map((row) => row.length)
-    expect(widths(skullArt(true))).toEqual(widths(skullArt(false)))
+    const die = widths(dieArt({ sides: 20, value: 1, kept: true, exploded: false, sign: 1 }))
+    expect(widths(skullArt(false))).toEqual(die)
+    expect(widths(skullArt(true))).toEqual(die)
   })
 })
 
