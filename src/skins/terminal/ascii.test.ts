@@ -142,6 +142,13 @@ describe("рисунки", () => {
     )
   })
 
+  it("без подписи и числа отдаёт пустую рамку того же размера", () => {
+    const die = { sides: 4, value: 2, kept: true, exploded: false, sign: 1 } as const
+    expect(dieArt(die, true)).toBe([".-----.", "|     |", "|     |", "|     |", "'-----'"].join("\n"))
+    // Точки d6 — часть рисунка, они остаются и в пустой рамке.
+    expect(dieArt({ ...die, sides: 6, value: 5 }, true).split("\n")[2]).toBe("|  o  |")
+  })
+
   it("расширяет рамку под длинное число", () => {
     const rows = dieArt({ sides: 6, value: 1234, kept: true, exploded: true, sign: 1 }).split("\n")
     expect(new Set(rows.map((row) => row.length)).size).toBe(1)

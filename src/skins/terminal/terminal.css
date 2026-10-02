@@ -351,8 +351,32 @@
 }
 
 .term .term-die {
+  position: relative;
+  display: block;
+  flex: none;
   color: var(--t-dim);
   line-height: 1.12;
+}
+
+/* Подпись граней врезана в верхнюю кромку, число — посередине рамки. Фон
+   под подписью закрывает чёрточки кромки. */
+.term-die__label,
+.term-die__value {
+  position: absolute;
+  left: 50%;
+  white-space: nowrap;
+}
+
+.term-die__label {
+  top: 0;
+  padding: 0 1px;
+  background: var(--t-bg);
+  transform: translateX(-50%);
+}
+
+.term-die__value {
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .term-die--dropped {
