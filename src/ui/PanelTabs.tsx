@@ -1,8 +1,8 @@
 import { useT } from "../i18n"
-import { ChevronIcon, LinkIcon, RollIcon, StarIcon, WandIcon } from "./icons"
+import { ChevronIcon, LinkIcon, RollIcon, StarIcon, SwordsIcon, WandIcon } from "./icons"
 
-/** Что открыто в общей области над полем ввода: кубы или сохранённые броски. */
-export type Panel = "dice" | "mine" | "shared"
+/** Что открыто в общей области над полем ввода: кубы, сохранённые броски или бой. */
+export type Panel = "dice" | "mine" | "shared" | "combat"
 
 interface Props {
   panel: Panel
@@ -43,6 +43,7 @@ export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollap
         {tab("dice", dcc ? <WandIcon /> : <RollIcon />, dcc ? t.tabs.dccDice : t.tabs.dice)}
         {tab("mine", <StarIcon />, t.tabs.mine)}
         {tab("shared", <LinkIcon />, t.tabs.shared)}
+        {tab("combat", <SwordsIcon />, t.tabs.combat)}
       </div>
 
       <button

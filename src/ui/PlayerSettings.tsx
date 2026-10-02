@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks"
 
 import type { BoardStatus } from "../board/sdk"
 import { DICE_SETS } from "../data/diceSets"
+import { validateFormula } from "../dice"
 import { LANGS, useT, type Lang } from "../i18n"
 import { Diagnostics } from "./Diagnostics"
 
@@ -15,6 +16,8 @@ export interface PlayerLook {
   character: string
   icon: string
   color: string
+  /** Формула инициативы: её кидает мастер за всех в начале боя. */
+  initiative: string
 }
 
 interface Props extends PlayerLook {
@@ -32,6 +35,7 @@ export const PlayerSettings = ({
   character,
   icon,
   color,
+  initiative,
   accountName,
   status,
   diceSet,
@@ -47,6 +51,8 @@ export const PlayerSettings = ({
   const [pickedLang, setPickedLang] = useState(lang)
   const [pickedIcon, setPickedIcon] = useState(icon)
   const [pickedColor, setPickedColor] = useState(color)
+  const [initiativeFormula, setInitiativeFormula] = useState(initiative)
+  const initiativeInvalid = initiativeFormula.trim() !== "" && !validateFormula(initiativeFormula).ok
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -72,7 +78,14 @@ export const PlayerSettings = ({
   }
 
   const save = (): void => {
-    onSave({ character: name.trim().slice(0, MAX_CHARACTER_NAME), icon: pickedIcon, color: pickedColor })
+    // С кривой формулой мастер споткнётся о неё в начале боя — лучше здесь.
+    if (initiativeInvalid) return
+    onSave({
+      character: name.trim().slice(0, MAX_CHARACTER_NAME),
+      icon: pickedIcon,
+      color: pickedColor,
+      initiative: initiativeFormula.trim(),
+    })
     onDiceSetChange(pickedSet)
     onLangChange(pickedLang)
     onClose()
@@ -102,6 +115,21 @@ export const PlayerSettings = ({
             onInput={(event) => setName((event.target as HTMLInputElement).value)}
             onKeyDown={(event) => event.key === "Enter" && save()}
           />
+        </label>
+
+        <label className="modal__field">
+          {t.settings.initiative}
+          <input
+            className={`input${initiativeInvalid ? " input--invalid" : ""}`}
+            type="text"
+            autocomplete="off"
+            spellcheck={false}
+            placeholder="1d20+2"
+            value={initiativeFormula}
+            onInput={(event) => setInitiativeFormula((event.target as HTMLInputElement).value)}
+            onKeyDown={(event) => event.key === "Enter" && save()}
+          />
+          <span className="modal__hint">{t.settings.initiativeHint}</span>
         </label>
 
         <div className="modal__field">
@@ -191,7 +219,7 @@ export const PlayerSettings = ({
           <button className="btn" onClick={onClose}>
             {t.settings.cancel}
           </button>
-          <button className="btn btn--primary" onClick={save}>
+          <button className="btn btn--primary" onClick={save} disabled={initiativeInvalid}>
             {t.settings.save}
           </button>
         </div>

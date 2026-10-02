@@ -31,6 +31,8 @@ import {
   type PresetBox,
 } from "./board/presets"
 import { postRollToBoard } from "./board/post"
+import { publishProfile } from "./board/players"
+import { rollInitiative, type Combatant } from "./combat/initiative"
 import { StatusBar } from "./ui/StatusBar"
 import { DiceBar } from "./ui/DiceBar"
 import { PlayerBar } from "./ui/PlayerBar"
@@ -40,6 +42,7 @@ import { PanelTabs, type Panel } from "./ui/PanelTabs"
 import { RollLog } from "./ui/RollLog"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { Help } from "./ui/Help"
+import { Combat } from "./ui/Combat"
 import { defaultColor, defaultIconId } from "./utils/avatar"
 
 const FORMULA_HISTORY_KEY = "dice.formulas.v1"
@@ -50,6 +53,7 @@ const DICE_COLLAPSED_KEY = "dice.collapsed.v1"
 const PANEL_KEY = "dice.panel.v1"
 const CHARACTER_KEY = "dice.character.v1"
 const LOOK_KEY = "dice.look.v1"
+const INITIATIVE_KEY = "dice.initiative.v1"
 const LANG_KEY = "dice.lang.v1"
 const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
@@ -117,6 +121,7 @@ export const App = () => {
   const [postToBoard, setPostToBoard] = useState(false)
   const [character, setCharacter] = useState("")
   const [look, setLook] = useState<{ icon?: string; color?: string }>({})
+  const [initiative, setInitiative] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [lang, setLang] = useState<Lang>(initialLang)
@@ -164,9 +169,12 @@ export const App = () => {
     setDiceSet(readJson<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
     setDiceCollapsed(readJson<boolean>(DICE_COLLAPSED_KEY, false))
     const savedPanel = readJson<unknown>(PANEL_KEY, "dice")
-    if (savedPanel === "dice" || savedPanel === "mine" || savedPanel === "shared") setPanel(savedPanel)
+    if (savedPanel === "dice" || savedPanel === "mine" || savedPanel === "shared" || savedPanel === "combat") {
+      setPanel(savedPanel)
+    }
     setCharacter(readJson<string>(CHARACTER_KEY, ""))
     setLook(readJson<{ icon?: string; color?: string }>(LOOK_KEY, {}))
+    setInitiative(readJson<string>(INITIATIVE_KEY, ""))
 
     const local = readLocalPresets(tRef.current.defaultPresets)
     setPersonal({ updatedAt: local.updatedAt, items: local.items })
@@ -239,6 +247,20 @@ export const App = () => {
     void syncPersonalPresets(user.id, personalRef.current).then(setPersonal)
   }, [status, user])
 
+  // Карточка игрока на доске — по ней мастер кидает инициативу за всех.
+  // Пишем при входе и после каждой правки настроек; ключ у игрока свой.
+  const profileName = character || user?.name || ""
+  useEffect(() => {
+    if (status !== "connected" || !user) return
+    void publishProfile(user.id, {
+      updatedAt: Date.now(),
+      name: profileName,
+      icon: playerIcon,
+      color: playerColor,
+      initiative,
+    })
+  }, [status, user, profileName, playerIcon, playerColor, initiative])
+
   const savePersonal = useCallback(
     (items: Preset[]) => {
       const box: PresetBox = { updatedAt: Date.now(), items }
@@ -260,6 +282,28 @@ export const App = () => {
       writeJson(FORMULA_HISTORY_KEY, next)
       return next
     })
+  }, [])
+
+  /**
+   * Запись в журнал: у себя сразу, на доску следом. lines — текст стикера,
+   * если игрок включил дублирование бросков на доску.
+   */
+  const publish = useCallback((entry: RollEntry, lines: string[]) => {
+    // Своя запись показывается сразу, не дожидаясь ответа доски.
+    setEntries((prev) => {
+      const merged = mergeEntries(prev, [entry])
+      writeLocalLog(merged)
+      return merged
+    })
+
+    if (statusRef.current !== "connected") return
+
+    // Общий журнал — смысл всей панели, поэтому неудачная публикация
+    // обязана быть видна игроку, а не теряться в молчаливом ретрае.
+    void publishEntry(entry).then((published) => {
+      setShareError(published ? null : tRef.current.errors.publishFailed)
+    })
+    if (postToBoardRef.current) void postRollToBoard(lines)
   }, [])
 
   /**
@@ -299,31 +343,45 @@ export const App = () => {
         results: result.rolls.map((item) => ({ total: item.total, detail: item.detail })),
       }
 
-      // Своя запись показывается сразу, не дожидаясь ответа доски.
-      setEntries((prev) => {
-        const merged = mergeEntries(prev, [entry])
-        writeLocalLog(merged)
-        return merged
-      })
       rememberFormula(source)
-
-      if (statusRef.current === "connected") {
-        // Общий журнал — смысл всей панели, поэтому неудачная публикация
-        // обязана быть видна игроку, а не теряться в молчаливом ретрае.
-        void publishEntry(entry).then((published) => {
-          setShareError(
-            published ? null : tRef.current.errors.publishFailed,
-          )
-        })
-        if (postToBoardRef.current) {
-          void postRollToBoard([
-            `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
-            ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
-          ])
-        }
-      }
+      publish(entry, [
+        `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
+        ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
+      ])
     },
-    [rememberFormula, user],
+    [publish, rememberFormula, user],
+  )
+
+  /**
+   * Инициатива за всех одной записью: результаты уже в порядке ходов, у
+   * каждого подпись персонажа. Формулы проверила вкладка боя, так что разбор
+   * здесь не падает.
+   */
+  const rollCombat = useCallback(
+    (combatants: Combatant[]) => {
+      const order = rollInitiative(combatants)
+      const strings = tRef.current
+      const entry: RollEntry = {
+        id: newId(),
+        ts: Date.now(),
+        userId: user?.id ?? anonId.current,
+        userName: characterRef.current || user?.name || strings.player.fallbackName,
+        icon: lookRef.current.icon,
+        color: lookRef.current.color,
+        kind: "initiative",
+        // Старая панель (из кэша у кого-то из партии) не знает про kind и
+        // покажет обычные плитки — пусть хоть заголовок у них будет понятный.
+        expression: strings.combat.title,
+        label: strings.combat.title,
+        results: order,
+      }
+
+      publish(entry, [
+        strings.combat.title,
+        ...order.map((item, index) => `${index + 1}. ${item.name} — ${item.total}`),
+      ])
+    },
+    [publish, user],
   )
 
   /** Собирает строку формы из сохранённого броска: формула плюс метка. */
@@ -421,6 +479,8 @@ export const App = () => {
   const savePlayerLook = useCallback((next: PlayerLook) => {
     setCharacter(next.character)
     writeJson(CHARACTER_KEY, next.character)
+    setInitiative(next.initiative)
+    writeJson(INITIATIVE_KEY, next.initiative)
 
     const appearance = { icon: next.icon, color: next.color }
     setLook(appearance)
@@ -460,11 +520,51 @@ export const App = () => {
     writeJson(POST_TO_BOARD_KEY, next)
   }, [])
 
+  const playerName = character || user?.name || t.player.fallbackName
+
+  const repeatEntry = (entry: RollEntry): void => {
+    // Строка с меткой уезжает и в поле ввода: повтор по Enter сохранит название.
+    const source = toSource(entry.expression, entry.label)
+    setFormula(source)
+    roll(source)
+  }
+
+  const combat = (
+    <Combat
+      connected={status === "connected"}
+      self={{ userId: playerId, name: playerName, icon: playerIcon, color: playerColor, initiative }}
+      onRoll={rollCombat}
+    />
+  )
+
+  const modals = (
+    <>
+      {helpOpen && <Help onClose={() => setHelpOpen(false)} />}
+
+      {settingsOpen && (
+        <PlayerSettings
+          character={character}
+          icon={playerIcon}
+          color={playerColor}
+          initiative={initiative}
+          status={status}
+          diceSet={diceSet}
+          lang={lang}
+          {...(user ? { accountName: user.name } : {})}
+          onSave={savePlayerLook}
+          onDiceSetChange={changeDiceSet}
+          onLangChange={changeLang}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+    </>
+  )
+
   return (
     <LangContext.Provider value={t}>
     <div className="app">
       <PlayerBar
-        name={character || user?.name || t.player.fallbackName}
+        name={playerName}
         userId={playerId}
         icon={playerIcon}
         color={playerColor}
@@ -488,16 +588,18 @@ export const App = () => {
         {!diceCollapsed &&
           (panel === "dice" ? (
             <DiceBar diceSet={diceSet} onRoll={roll} />
+          ) : panel === "combat" ? (
+            combat
           ) : (
             <Presets
               scope={scope}
               items={scope === "mine" ? personal.items : shared}
-        sharedAvailable={status === "connected"}
-        draft={presetDraft}
-        onDraftChange={setPresetDraft}
-        onDraftSubmit={submitDraft}
-        onEdit={editPreset}
-        onRoll={(preset) => roll(preset.formula, preset.name)}
+              sharedAvailable={status === "connected"}
+              draft={presetDraft}
+              onDraftChange={setPresetDraft}
+              onDraftSubmit={submitDraft}
+              onEdit={editPreset}
+              onRoll={(preset) => roll(preset.formula, preset.name)}
               onRemove={removePreset}
               onReorder={reorderPreset}
             />
@@ -513,35 +615,9 @@ export const App = () => {
         onSaveCurrent={() => savePresetNow(formula)}
       />
 
-      {helpOpen && <Help onClose={() => setHelpOpen(false)} />}
+      {modals}
 
-      {settingsOpen && (
-        <PlayerSettings
-          character={character}
-          icon={playerIcon}
-          color={playerColor}
-          status={status}
-          diceSet={diceSet}
-          lang={lang}
-          {...(user ? { accountName: user.name } : {})}
-          onSave={savePlayerLook}
-          onDiceSetChange={changeDiceSet}
-          onLangChange={changeLang}
-          onClose={() => setSettingsOpen(false)}
-        />
-      )}
-
-      <RollLog
-        entries={entries}
-        currentUserId={playerId}
-        onRepeat={(entry) => {
-          // Строка с меткой уезжает и в поле ввода: повтор по Enter сохранит название.
-          const source = toSource(entry.expression, entry.label)
-          setFormula(source)
-          roll(source)
-        }}
-        onSave={savePresetFromEntry}
-      />
+      <RollLog entries={entries} currentUserId={playerId} onRepeat={repeatEntry} onSave={savePresetFromEntry} />
 
       <label className="checkbox">
         <input

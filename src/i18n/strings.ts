@@ -36,8 +36,11 @@ const en = {
   tabs: {
     dice: "Dice",
     dccDice: "DCC dice",
-    mine: "My rolls",
-    shared: "Shared rolls",
+    // Коротко, как и в русском: с четвёртой вкладкой «My rolls / Shared rolls»
+    // выталкивали «Combat» под стрелку сворачивания.
+    mine: "Mine",
+    shared: "Shared",
+    combat: "Combat",
     show: "Expand",
     hide: "Collapse",
   },
@@ -76,6 +79,26 @@ const en = {
   },
 
   postToBoard: "Also post rolls to the board as sticky notes",
+
+  combat: {
+    title: "Initiative",
+    rolledBy: (name: string) => `rolled by ${name}`,
+    players: "Players on the board",
+    refresh: "Refresh",
+    you: "you",
+    formulaFor: (name: string) => `Initiative formula for ${name}`,
+    include: (name: string) => `Include ${name}`,
+    offline: "Local mode: only you are listed. Monsters work as usual.",
+    onlineFailed: "Couldn't get the list of players on the board, so only you are listed.",
+    monsters: "Monsters",
+    monster: "Monster",
+    monsterPlaceholder: "3#1d20+1 : Goblin",
+    monsterHint: "1d20+1 : Goblins is one roll for the group, 3#1d20+1 : Goblin is a roll for each of three.",
+    addMonster: "Add",
+    removeMonster: (name: string) => `Remove ${name}`,
+    nobody: "Tick at least one player or monster",
+    roll: "Roll initiative",
+  },
 
   errors: {
     parseFailed: "Couldn't read the formula",
@@ -121,6 +144,8 @@ const en = {
     iconCredits: (authors: string) => `Icons: game-icons.net (${authors}), CC BY 3.0.`,
     diceSet: "Dice set",
     language: "Language",
+    initiative: "Initiative",
+    initiativeHint: "The GM rolls it for everyone at the start of a fight. Empty means 1d20.",
     showDiagnostics: "diagnostics",
     hideDiagnostics: "hide diagnostics",
     cancel: "Cancel",
@@ -163,13 +188,14 @@ const en = {
       ["die button, Enter", "roll what's in the field"],
       ["↑ and ↓", "previous formulas, like in a terminal"],
       ["save by the field", "save the roll to the open tab"],
-      ["Dice, My rolls, Shared rolls", "dice buttons, your saved rolls and ones shared with the party"],
+      ["Dice, Mine, Shared", "dice buttons, your saved rolls and ones shared with the party"],
       ["⌃ by the tabs", "collapse the tabs to make room for history"],
       ["↻ in history", "reroll, keeping the label"],
       ["save on a formula", "save that roll for yourself"],
       ["✎ and × on a roll", "edit or delete; they appear on hover"],
       ["drag and drop", "reorder saved rolls"],
-      ["settings", "character name, icon, colour, dice set, language and diagnostics"],
+      ["Combat", "the GM's tab: one button rolls initiative for everyone on the board and the monsters"],
+      ["settings", "character name, icon, colour, initiative, dice set, language and diagnostics"],
     ] as Array<[string, string]>,
     limits: (count: number, sides: number, repeat: number) =>
       `Case doesn't matter, and spaces can go anywhere. One roll can have up to ${count} dice, up to ${sides} sides per die and up to ${repeat} repeats with #. The dice are fair: rolls come from the browser's cryptographic generator, not Math.random.`,
@@ -268,6 +294,7 @@ const ru: Strings = {
     // панели рядом с «Кубы DCC», а звёздочка и цепочка и так поясняют смысл.
     mine: "Мои",
     shared: "Общие",
+    combat: "Бой",
     show: "Развернуть",
     hide: "Свернуть",
   },
@@ -306,6 +333,26 @@ const ru: Strings = {
   },
 
   postToBoard: "дублировать броски стикером на доску",
+
+  combat: {
+    title: "Инициатива",
+    rolledBy: (name) => `кинул ${name}`,
+    players: "Игроки на доске",
+    refresh: "Обновить",
+    you: "вы",
+    formulaFor: (name) => `Формула инициативы: ${name}`,
+    include: (name) => `В бою: ${name}`,
+    offline: "Локальный режим: в списке только вы. Монстры работают как обычно.",
+    onlineFailed: "Не удалось узнать, кто на доске, — в списке только вы.",
+    monsters: "Монстры",
+    monster: "Монстр",
+    monsterPlaceholder: "3#1d20+1 : Гоблин",
+    monsterHint: "1d20+1 : Гоблины — один бросок на группу, 3#1d20+1 : Гоблин — каждому из трёх свой.",
+    addMonster: "Добавить",
+    removeMonster: (name) => `Убрать ${name}`,
+    nobody: "Отметьте хотя бы одного игрока или монстра",
+    roll: "Бросить инициативу",
+  },
 
   errors: {
     parseFailed: "Не удалось разобрать формулу",
@@ -351,6 +398,8 @@ const ru: Strings = {
     iconCredits: (authors) => `Иконки — game-icons.net (${authors}), лицензия CC BY 3.0.`,
     diceSet: "Набор кубов",
     language: "Язык",
+    initiative: "Инициатива",
+    initiativeHint: "Мастер кидает её за всех в начале боя. Пусто — значит 1d20.",
     showDiagnostics: "диагностика",
     hideDiagnostics: "скрыть диагностику",
     cancel: "Отмена",
@@ -399,7 +448,8 @@ const ru: Strings = {
       ["дискета на формуле", "сохранить этот бросок себе"],
       ["✎ и × на броске", "изменить или удалить; появляются при наведении"],
       ["перетаскивание", "менять порядок сохранённых бросков"],
-      ["настройки", "имя персонажа, значок, цвет, набор кубов, язык и диагностика"],
+      ["Бой", "вкладка мастера: одна кнопка кидает инициативу за всех на доске и за монстров"],
+      ["настройки", "имя персонажа, значок, цвет, инициатива, набор кубов, язык и диагностика"],
     ],
     limits: (count, sides, repeat) =>
       `Регистр не важен, пробелы можно ставить где удобно. За раз можно кинуть до ${count} кубов, граней у куба до ${sides}, повторов через # до ${repeat}. Кубы честные: бросок берётся из криптографического генератора браузера, а не из Math.random.`,

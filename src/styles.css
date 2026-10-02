@@ -1313,3 +1313,178 @@ button {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* --- Бой: вкладка мастера --- */
+/*
+ * Своя прокрутка с потолком, как у сохранённых бросков: игроков и монстров
+ * может набраться десяток, а журналу под вкладкой нужно место.
+ */
+.combat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 40vh;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.combat__head {
+  display: flex;
+  align-items: center;
+  min-height: 22px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.combat__head + .combat__head,
+.combat__hint + .combat__head,
+.combat__row + .combat__head {
+  margin-top: 4px;
+}
+
+.combat__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.combat__row input[type="checkbox"] {
+  flex: none;
+  margin: 0;
+}
+
+.combat__name,
+.combat__monster {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat__monster {
+  font-variant-numeric: tabular-nums;
+}
+
+.combat__you {
+  color: var(--muted);
+}
+
+/* Формулы игроков короткие: `1d20+2`, `1d16-1`. Узкое поле оставляет имени
+   всю остальную ширину. */
+.combat__formula {
+  flex: none;
+  width: 88px;
+}
+
+.combat__add {
+  display: flex;
+  gap: 6px;
+}
+
+.combat__hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.combat__roll {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* --- Инициатива в журнале --- */
+/*
+ * Порядок ходов — то, к чему партия возвращается весь бой, поэтому карточка
+ * выделена акцентом и заметна в потоке обычных бросков издалека.
+ */
+.entry--initiative {
+  align-items: stretch;
+  border-color: var(--accent);
+  border-left-width: 3px;
+  background: var(--accent-soft);
+  padding: 5px 8px 4px 7px;
+}
+
+.initiative__icon {
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+}
+
+.initiative__title {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.initiative {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.initiative__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 6px 2px 4px;
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.initiative__place {
+  flex: none;
+  width: 16px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.initiative__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.initiative__row--npc .initiative__name {
+  font-weight: 400;
+}
+
+/* Расклад прижат к сумме и уступает место имени первым. */
+.initiative__detail {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.initiative__total {
+  flex: none;
+  min-width: 24px;
+  text-align: right;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

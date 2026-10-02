@@ -16,7 +16,25 @@ export interface RollEntry {
   color?: string
   expression: string
   label?: string
-  results: Array<{ total: number; detail: string }>
+  /** Особый бросок. Сейчас это только инициатива: мастер кидает за всех разом. */
+  kind?: "initiative"
+  results: RollResultEntry[]
+}
+
+/**
+ * Один бросок внутри записи. Поля после detail есть только у инициативы:
+ * там в одной записи броски разных персонажей, уже выстроенные по порядку
+ * ходов, и каждому нужна своя подпись.
+ */
+export interface RollResultEntry {
+  total: number
+  detail: string
+  name?: string
+  expression?: string
+  npc?: boolean
+  userId?: string
+  icon?: string
+  color?: string
 }
 
 export const newId = (): string =>

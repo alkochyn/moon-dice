@@ -165,3 +165,19 @@ export const LinkIcon = ({ className }: Props) => (
     <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" />
   </svg>
 )
+
+/** Скрещённые мечи — бой и инициатива. */
+export const SwordsIcon = ({ className }: Props) => (
+  <svg
+    {...box}
+    className={`icon${className ? ` ${className}` : ""}`}
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M4 4l10 10M11.5 16.5l5-5M14 14l5 5" />
+    <path d="M20 4L10 14M12.5 16.5l-5-5M10 14l-5 5" />
+  </svg>
+)

@@ -53,7 +53,7 @@ export type Node =
   | { kind: "unary"; operand: Node; paren: boolean }
 
 export interface ParsedFormula {
-  /** Формула без метки и без повторителя. */
+  /** Формула без метки; повторитель остаётся как написан: `3#1d20`. */
   expression: string
   /** Сколько раз кинуть формулу: `3#1d20` -> 3. */
   repeat: number

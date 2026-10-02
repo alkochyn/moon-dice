@@ -1,7 +1,7 @@
 import type { RollEntry } from "../board/log"
 import { useT } from "../i18n"
 import { Avatar } from "./Avatar"
-import { RepeatIcon, SaveIcon } from "./icons"
+import { RepeatIcon, SaveIcon, SwordsIcon } from "./icons"
 
 interface Props {
   entries: RollEntry[]
@@ -25,6 +25,58 @@ const Detail = ({ result }: { result: { total: number; detail: string } }) =>
     </span>
   )
 
+/** Значок монстра в порядке ходов: свой у всех, чтобы монстры не путались с игроками. */
+const MONSTER_ICON = "goblin-head"
+const MONSTER_COLOR = "#475569"
+
+/**
+ * Инициатива — не обычный бросок, а порядок ходов: строки уже выстроены, у
+ * каждой номер, имя персонажа и сумма справа. Карточка выделена, чтобы в
+ * потоке бросков её было видно издалека, — к ней возвращаются весь бой.
+ */
+const InitiativeEntry = ({ entry, locale }: { entry: RollEntry; locale: string }) => {
+  const t = useT()
+
+  return (
+    <article className="entry entry--initiative">
+      <div className="entry__body">
+        <div className="entry__line">
+          <SwordsIcon className="initiative__icon" />
+          <span className="initiative__title">{t.combat.title}</span>
+          <span className="entry__label">{t.combat.rolledBy(entry.userName)}</span>
+        </div>
+
+        <ol className="initiative">
+          {entry.results.map((result, index) => (
+            <li key={index} className={`initiative__row${result.npc ? " initiative__row--npc" : ""}`}>
+              <span className="initiative__place">{index + 1}</span>
+              <Avatar
+                name={result.name ?? ""}
+                userId={result.userId ?? result.name ?? ""}
+                {...(result.npc ? { icon: MONSTER_ICON, color: MONSTER_COLOR } : {})}
+                {...(!result.npc && result.icon ? { icon: result.icon } : {})}
+                {...(!result.npc && result.color ? { color: result.color } : {})}
+              />
+              <span className="initiative__name">{result.name}</span>
+              <span
+                className="initiative__detail"
+                title={result.expression ? `${result.expression} → ${result.detail}` : result.detail}
+              >
+                {result.detail}
+              </span>
+              <span className="initiative__total">{result.total}</span>
+            </li>
+          ))}
+        </ol>
+
+        <span className="entry__time" title={fullTime(entry.ts, locale)}>
+          {time(entry.ts, locale)}
+        </span>
+      </div>
+    </article>
+  )
+}
+
 export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => {
   const t = useT()
 
@@ -39,6 +91,8 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
     ) : (
       <div className="log">
         {entries.map((entry) => {
+          if (entry.kind === "initiative") return <InitiativeEntry key={entry.id} entry={entry} locale={t.locale} />
+
           // `6#3d6` — это шесть отдельных бросков, и каждый показывается своей
           // плиткой: сумма крупно, расклад под ней. Одной строкой с колонкой
           // сумм сбоку было не понять, какой расклад к какой сумме относится.
