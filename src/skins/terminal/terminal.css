@@ -309,7 +309,7 @@
 .term-entry__roll {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
@@ -340,12 +340,13 @@
    крупнее — пять строк куба по высоте. */
 .term .term-entry__mod {
   /* Как у большой суммы: верх цифр — подчёркивания внизу первой строки,
-     поэтому без подъёма цифра сидит ниже кубов. */
+     поэтому без подъёма цифра сидит ниже кубов. Ростом с куб, но тусклая и
+     тонкая: это добавка к броску, а не результат. */
   position: relative;
   top: -0.48em;
-  color: var(--t-fg);
+  color: var(--t-dim);
   font-size: 23px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -370,14 +371,16 @@
 /* Верхняя строка цифр — подчёркивания у нижнего края, поэтому рамка <pre>
    начинается выше самих цифр. Поднимаем на полстроки, чтобы сумма
    смотрелась по центру куба. */
+/* Итог броска — главное в рамке: крупнее кубов и модификатора, ярче и со
+   свечением. */
 .term .term-entry__big {
   position: relative;
   top: -0.45em;
-  color: var(--t-fg);
-  font-size: 18px;
+  color: var(--t-hi);
+  font-size: 27px;
   font-weight: 700;
   line-height: 1;
-  text-shadow: 0 0 8px var(--t-glow);
+  text-shadow: 0 0 10px var(--t-glow);
 }
 
 .term-entry--crit .term-entry__big {
