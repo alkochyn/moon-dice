@@ -300,14 +300,11 @@ export const Terminal = ({
       return
     }
 
-    // Удачный бросок очищает строку, как в шелле; ошибочный оставляет её
-    // править. Прежние формулы — по стрелке вверх.
+    // Строка после броска остаётся: ту же формулу часто кидают ещё раз или
+    // правят на единицу. Журнал открывается, только если бросок удался.
     const ok = validateFormula(source).ok
     onRoll(source)
-    if (ok) {
-      onFormulaChange("")
-      setTab("log")
-    }
+    if (ok) setTab("log")
   }
 
   const stepHistory = (delta: number): void => {

@@ -201,7 +201,7 @@ const en = {
     ] as Array<[string, string]>,
     terminal: "Terminal",
     terminalRows: [
-      ["Enter or ROLL", "roll the line; a good roll clears it, a broken one stays to fix"],
+      ["Enter or ROLL", "roll the line; it stays in the field for the next roll"],
       ["↑ and ↓", "previous formulas"],
       ["F1–F4", "your first four saved rolls, wherever the focus is"],
       ["SAVED", "all your rolls and the party's: rename, reorder with ^ and v, delete"],
@@ -513,7 +513,7 @@ const ru: Strings = {
     ],
     terminal: "Терминал",
     terminalRows: [
-      ["Enter или БРОСОК", "кинуть строку; удачный бросок её очищает, ошибочный оставляет править"],
+      ["Enter или БРОСОК", "кинуть строку; она остаётся в поле для следующего броска"],
       ["↑ и ↓", "прежние формулы"],
       ["F1–F4", "первые четыре своих броска, где бы ни стоял фокус"],
       ["СВОИ", "все свои и общие броски: название, порядок через ^ и v, удаление"],
