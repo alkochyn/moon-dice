@@ -274,18 +274,24 @@
   white-space: nowrap;
 }
 
-.term-entry__who,
-.term-entry__what {
+.term-entry__what,
+.term-entry__time {
   padding: 0 5px;
   background: var(--t-bg);
 }
 
+/* Длинная подпись обрезается многоточием, время справа не уезжает. */
 .term-entry__what {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.term-entry__time {
+  flex: none;
+}
+
+.term-entry__arrow,
 .term-entry__time,
 .term-entry__label {
   color: var(--t-dim);

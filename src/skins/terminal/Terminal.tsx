@@ -507,6 +507,8 @@ const TermEntry = ({ view, mine, burnToken, rattleToken, onBurnDone, onIgnite, o
   const initiative = entry.kind === "initiative"
   const single = !initiative && entry.results.length === 1 ? entry.results[0] : undefined
   const drawn = dice && dice.length <= MAX_DRAWN_DICE ? dice : null
+  const what = initiative ? t.combat.title : entry.expression
+  const label = initiative ? undefined : entry.label
 
   const classes = [
     "term-entry",
@@ -521,15 +523,16 @@ const TermEntry = ({ view, mine, burnToken, rattleToken, onBurnDone, onIgnite, o
     <article className={classes}>
       {burnToken ? <Fire token={burnToken} onDone={onBurnDone} /> : null}
 
+      {/* Кто, что и зачем — одной фразой слева, как строка в чате: «Judge Moon
+          -> 1d20+1d4+5 бью правой». Время справа, оно нужно реже. */}
       <header className="term-entry__title">
-        <span className="term-entry__who">
-          <span className="term-entry__time">{clock(entry.ts, t.locale)}</span>{" "}
+        <span className="term-entry__what" title={label ? `${entry.userName} -> ${what} ${label}` : undefined}>
           <span className="term-entry__user">{entry.userName}</span>
+          <span className="term-entry__arrow"> -&gt; </span>
+          <span className="term-entry__expr">{what}</span>
+          {label && <span className="term-entry__label"> {label}</span>}
         </span>
-        <span className="term-entry__what">
-          <span className="term-entry__expr">{initiative ? t.combat.title : entry.expression}</span>
-          {entry.label && !initiative && <span className="term-entry__label"> # {entry.label}</span>}
-        </span>
+        <span className="term-entry__time">{clock(entry.ts, t.locale)}</span>
       </header>
 
       {initiative && (
