@@ -135,18 +135,11 @@ describe("натуральные 20 и 1", () => {
 describe("рисунки", () => {
   it("рисует d6 точками, остальные числом", () => {
     expect(dieArt({ sides: 6, value: 5, kept: true, exploded: false, sign: 1 })).toBe(
-      [".-d6--.", "|o   o|", "|  o  |", "|o   o|", "'-----'"].join("\n"),
+      [".d6---.", "|o   o|", "|  o  |", "|o   o|", "'-----'"].join("\n"),
     )
     expect(dieArt({ sides: 20, value: 17, kept: true, exploded: false, sign: 1 })).toBe(
-      [".-d20-.", "|     |", "| 17  |", "|     |", "'-----'"].join("\n"),
+      [".d20--.", "|     |", "| 17  |", "|     |", "'-----'"].join("\n"),
     )
-  })
-
-  it("без подписи и числа отдаёт пустую рамку того же размера", () => {
-    const die = { sides: 4, value: 2, kept: true, exploded: false, sign: 1 } as const
-    expect(dieArt(die, true)).toBe([".-----.", "|     |", "|     |", "|     |", "'-----'"].join("\n"))
-    // Точки d6 — часть рисунка, они остаются и в пустой рамке.
-    expect(dieArt({ ...die, sides: 6, value: 5 }, true).split("\n")[2]).toBe("|  o  |")
   })
 
   it("расширяет рамку под длинное число", () => {

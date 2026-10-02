@@ -157,31 +157,27 @@ const PIPS: Record<number, [string, string, string]> = {
  * Куб в рамке 7×5: грани подписаны на верхней кромке, у d6 вместо числа
  * точки. Для длинных чисел (взорвавшиеся кубы) рамка расширяется.
  *
- * bare — одна рамка, без подписи и числа: в моноширинной сетке «d4» и «17»
- * в пяти позициях по центру не встают, поэтому скин кладёт их поверх рамки
- * и центрирует уже вёрсткой.
+ * Подпись всегда прижата к левому углу: `.d4---.`, `.d20--.`. По центру
+ * «d4» в пяти позициях не встаёт, и полуцентровка выглядела ошибкой.
  */
-export const dieArt = (die: AsciiDie, bare = false): string => {
+export const dieArt = (die: AsciiDie): string => {
   const value = String(die.value)
   const inner = Math.max(5, value.length + 2)
-  const label = bare ? "" : `-d${die.sides}`
+  const label = `d${die.sides}`
   const top = `.${(label + "-".repeat(inner)).slice(0, inner)}.`
   const bottom = `'${"-".repeat(inner)}'`
 
-  const pips = hasPips(die) ? PIPS[die.value] : undefined
-  const blank = " ".repeat(inner)
+  const pips = die.sides === 6 && !die.exploded ? PIPS[die.value] : undefined
   const middle = pips
     ? pips
     : (() => {
         const left = Math.floor((inner - value.length) / 2)
-        return [blank, bare ? blank : (" ".repeat(left) + value + blank).slice(0, inner), blank]
+        const blank = " ".repeat(inner)
+        return [blank, (" ".repeat(left) + value + blank).slice(0, inner), blank]
       })()
 
   return [top, ...middle.map((row) => `|${row}|`), bottom].join("\n")
 }
-
-/** У d6 вместо числа точки — если он не взорвался в двузначное. */
-export const hasPips = (die: AsciiDie): boolean => die.sides === 6 && !die.exploded && die.value >= 1 && die.value <= 6
 
 /** Цифры для суммы: три строки на знак, как на семисегментном табло. */
 const DIGITS: Record<string, [string, string, string]> = {

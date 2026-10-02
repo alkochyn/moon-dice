@@ -13,7 +13,6 @@ import {
   artLayout,
   bigNumber,
   dieArt,
-  hasPips,
   naturalOf,
   rollArtOf,
   skullArt,
@@ -121,19 +120,6 @@ const Fire = ({ token, onDone }: { token: number; onDone: () => void }) => {
     </div>
   )
 }
-
-/**
- * Куб: рамка — ASCII, а подпись граней и число лежат поверх и центрируются
- * вёрсткой. В моноширинной сетке «d4» или «17» в пяти позициях ровно по
- * центру не встают — одна сторона всегда на полсимвола длиннее.
- */
-const DiePicture = ({ die }: { die: AsciiDie }) => (
-  <span className={`term-die${die.kept ? "" : " term-die--dropped"}`}>
-    <pre>{dieArt(die, true)}</pre>
-    <span className="term-die__label">d{die.sides}</span>
-    {!hasPips(die) && <span className="term-die__value">{die.value}</span>}
-  </span>
-)
 
 /**
  * Череп на натуральной 1: на пару секунд ложится поверх d20 и клацает
@@ -650,7 +636,7 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
                   }
 
                   const die = drawn.dice[item.index] as AsciiDie
-                  const picture = <DiePicture die={die} />
+                  const picture = <pre className={`term-die${die.kept ? "" : " term-die--dropped"}`}>{dieArt(die)}</pre>
                   if (item.index !== naturalIndex) return <Fragment key={position}>{picture}</Fragment>
 
                   // Тот самый d20 — кнопка: клик повторяет меч с огнём или череп.
