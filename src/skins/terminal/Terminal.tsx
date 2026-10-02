@@ -1,5 +1,5 @@
-import type { ComponentChildren } from "preact"
-import { useEffect, useMemo, useRef, useState } from "preact/hooks"
+import { Fragment, type ComponentChildren } from "preact"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks"
 
 import "./terminal.css"
 import type { RollEntry } from "../../board/log"
@@ -8,7 +8,7 @@ import type { BoardStatus } from "../../board/sdk"
 import { findDiceSet } from "../../data/diceSets"
 import { parseFormula, validateFormula } from "../../dice"
 import { useT } from "../../i18n"
-import { AsciiFire, bigNumber, dieArt, diceOf, naturalOf, skullArt, SWORD, type AsciiDie, type Natural } from "./ascii"
+import { AsciiFire, bigNumber, dieArt, naturalOf, rollArtOf, skullArt, SWORD, type Natural, type RollArt } from "./ascii"
 import { SavedRolls } from "./SavedRolls"
 
 const SCREEN_KEY = "dice.term.screen.v1"
@@ -22,8 +22,10 @@ const FADE_MS = 1700
 const RATTLE_MS = 2000
 /** Пасхалки срабатывают только на свежие броски, а не на подгруженную историю. */
 const FRESH_MS = 15000
-/** Больше кубов рисовать нет смысла — рамки займут весь экран. */
-const MAX_DRAWN_DICE = 8
+/** Больше кубов в строку не влезет ни в какую панель — их и не рисуем. */
+const MAX_DRAWN_DICE = 12
+/** Зазор между кубами, мечом и суммой в строке броска — как в CSS. */
+const ROW_GAP = 10
 
 type Tab = "log" | "saved" | "init"
 
@@ -134,14 +136,14 @@ const Skull = ({ token, onClick, label }: { token: number; onClick: () => void; 
 
 interface EntryView {
   entry: RollEntry
-  dice: AsciiDie[] | null
+  art: RollArt | null
   natural: Natural
 }
 
 const viewOf = (entry: RollEntry): EntryView => {
   const single = entry.kind !== "initiative" && entry.results.length === 1 ? entry.results[0] : undefined
-  const dice = single ? diceOf(entry.expression, single.detail) : null
-  return { entry, dice, natural: naturalOf(dice) }
+  const art = single ? rollArtOf(entry.expression, single.detail) : null
+  return { entry, art, natural: naturalOf(art?.dice ?? null) }
 }
 
 export const Terminal = ({
@@ -182,6 +184,15 @@ export const Terminal = ({
   // Свой бросок должен быть виден, даже если ленту отмотали назад: после
   // отрисовки докручиваем до него. Чужие броски ленту не дёргают.
   const scrollPending = useRef(false)
+  // Ширина ленты: по ней каждый бросок решает, влезают ли его кубы в строку.
+  const [feedWidth, setFeedWidth] = useState(0)
+  useEffect(() => {
+    const feed = feedRef.current
+    if (!feed || typeof ResizeObserver === "undefined") return undefined
+    const observer = new ResizeObserver(([item]) => setFeedWidth(Math.round(item?.contentRect.width ?? 0)))
+    observer.observe(feed)
+    return () => observer.disconnect()
+  }, [tab])
   useEffect(() => {
     if (!scrollPending.current || tab !== "log") return
     scrollPending.current = false
@@ -362,6 +373,7 @@ export const Terminal = ({
                 key={view.entry.id}
                 view={view}
                 mine={view.entry.userId === currentUserId}
+                width={feedWidth}
                 burnToken={burn?.id === view.entry.id ? burn.token : 0}
                 rattleToken={rattle?.id === view.entry.id ? rattle.token : 0}
                 onBurnDone={() => setBurn(null)}
@@ -492,6 +504,8 @@ export const Terminal = ({
 interface EntryProps {
   view: EntryView
   mine: boolean
+  /** Ширина ленты — меняется, значит, надо заново проверить, влезают ли кубы. */
+  width: number
   burnToken: number
   rattleToken: number
   onBurnDone: () => void
@@ -501,12 +515,37 @@ interface EntryProps {
   onSave: () => void
 }
 
-const TermEntry = ({ view, mine, burnToken, rattleToken, onBurnDone, onIgnite, onRattle, onRepeat, onSave }: EntryProps) => {
+const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIgnite, onRattle, onRepeat, onSave }: EntryProps) => {
   const t = useT()
-  const { entry, dice, natural } = view
+  const { entry, art, natural } = view
   const initiative = entry.kind === "initiative"
   const single = !initiative && entry.results.length === 1 ? entry.results[0] : undefined
-  const drawn = dice && dice.length <= MAX_DRAWN_DICE ? dice : null
+  // Рисуем, только если картинка честная: сложение и вычитание, есть кубы.
+  const drawable = art && art.linear && art.dice.length > 0 && art.dice.length <= MAX_DRAWN_DICE ? art : null
+
+  // Влезает ли картинка в строку, видно только после раскладки: меряем её
+  // ширину один раз и сравниваем с местом, что остаётся рядом с суммой. Не
+  // влезла — показываем разбор текстом, а ширину помним, чтобы вернуть
+  // картинку, если панель станет шире.
+  const rowRef = useRef<HTMLDivElement>(null)
+  const artRef = useRef<HTMLDivElement>(null)
+  const sumRef = useRef<HTMLDivElement>(null)
+  // Сумму меряем вместе с картинкой: при ней под суммой стоит разбор, и
+  // колонка шире, чем при тексте. Мерить её в текстовом виде — значит решить,
+  // что картинка влезает, вернуть её и тут же обрезать.
+  const measured = useRef<{ art: number; sum: number } | null>(null)
+  const [fits, setFits] = useState(true)
+  useLayoutEffect(() => {
+    if (!drawable) return
+    if (artRef.current && sumRef.current) {
+      measured.current = { art: artRef.current.scrollWidth, sum: sumRef.current.offsetWidth }
+    }
+    const row = rowRef.current
+    if (!row || !measured.current) return
+    const room = row.clientWidth - measured.current.sum - ROW_GAP * (row.children.length - 1)
+    setFits(measured.current.art <= room)
+  }, [width, drawable])
+  const drawn = drawable && fits ? drawable : null
   const what = initiative ? t.combat.title : entry.expression
   const label = initiative ? undefined : entry.label
 
@@ -560,18 +599,33 @@ const TermEntry = ({ view, mine, burnToken, rattleToken, onBurnDone, onIgnite, o
       )}
 
       {single && (
-        <div className="term-entry__roll">
+        <div ref={rowRef} className="term-entry__roll">
           <div className="term-entry__dice">
             {drawn ? (
-              drawn.map((die, index) => (
-                <pre key={index} className={`term-die${die.kept ? "" : " term-die--dropped"}`}>
-                  {dieArt(die)}
-                </pre>
-              ))
+              <div ref={artRef} className="term-entry__art">
+                {drawn.dice.map((die, index) => (
+                  <Fragment key={index}>
+                    {(index > 0 || die.sign < 0) && <span className="term-entry__op">{die.sign < 0 ? "-" : "+"}</span>}
+                    <pre className={`term-die${die.kept ? "" : " term-die--dropped"}`}>{dieArt(die)}</pre>
+                    {/* Череп — сразу за тем d20, что выпал единицей. */}
+                    {natural === "fumble" && die.sides === 20 && die.kept && (
+                      <Skull token={rattleToken} onClick={onRattle} label={t.term.rattle} />
+                    )}
+                  </Fragment>
+                ))}
+                {drawn.modifier !== 0 && (
+                  <>
+                    <span className="term-entry__op">{drawn.modifier < 0 ? "-" : "+"}</span>
+                    <span className="term-entry__mod">{Math.abs(drawn.modifier)}</span>
+                  </>
+                )}
+              </div>
             ) : (
-              <span className="term-entry__detail">{single.detail}</span>
+              <>
+                <span className="term-entry__detail">{single.detail}</span>
+                {natural === "fumble" && <Skull token={rattleToken} onClick={onRattle} label={t.term.rattle} />}
+              </>
             )}
-            {natural === "fumble" && <Skull token={rattleToken} onClick={onRattle} label={t.term.rattle} />}
           </div>
           {/* Меч выезжает слева, из-за кубов, в пустоту перед суммой. Ключ по
               токену огня перезапускает анимацию на каждом поджиге. */}
@@ -585,7 +639,7 @@ const TermEntry = ({ view, mine, burnToken, rattleToken, onBurnDone, onIgnite, o
               <span className="term-sword__label">{t.term.nat20}</span>
             </button>
           )}
-          <div className="term-entry__sum">
+          <div ref={sumRef} className="term-entry__sum">
             <pre className="term-entry__big">{bigNumber(single.total)}</pre>
             {drawn && single.detail !== String(single.total) && single.detail !== `[${single.total}]` && (
               <span className="term-entry__detail">{single.detail}</span>

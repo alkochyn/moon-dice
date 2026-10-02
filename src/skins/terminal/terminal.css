@@ -314,12 +314,31 @@
   gap: 10px;
 }
 
+/* Кубы, знаки и модификатор — одной строкой, без переноса: если картинка не
+   влезает, компонент сам заменит её разбором текстом. */
 .term-entry__dice {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  flex: 0 1 auto;
+  align-items: center;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
+}
+
+.term-entry__art {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.term-entry__op {
+  color: var(--t-dim);
+}
+
+.term-entry__mod {
+  color: var(--t-fg);
+  font-weight: 700;
 }
 
 .term .term-die {

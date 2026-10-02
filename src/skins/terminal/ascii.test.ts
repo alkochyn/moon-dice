@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { rollFormula, type Rng } from "../../dice"
-import { AsciiFire, bigNumber, dieArt, diceOf, naturalOf, skullArt } from "./ascii"
+import { AsciiFire, bigNumber, dieArt, diceOf, naturalOf, rollArtOf, skullArt } from "./ascii"
 
 const seq = (...values: number[]): Rng => {
   let i = 0
@@ -22,9 +22,9 @@ const dice = (formula: string, ...values: number[]) => {
 describe("кубы из записи журнала", () => {
   it("подставляет грани из формулы в порядке пулов", () => {
     expect(dice("1d20+2d6+3", 14, 4, 5)).toEqual([
-      { sides: 20, value: 14, kept: true, exploded: false },
-      { sides: 6, value: 4, kept: true, exploded: false },
-      { sides: 6, value: 5, kept: true, exploded: false },
+      { sides: 20, value: 14, kept: true, exploded: false, sign: 1 },
+      { sides: 6, value: 4, kept: true, exploded: false, sign: 1 },
+      { sides: 6, value: 5, kept: true, exploded: false, sign: 1 },
     ])
   })
 
@@ -33,7 +33,7 @@ describe("кубы из записи журнала", () => {
   })
 
   it("складывает цепочку взрыва в одно значение", () => {
-    expect(dice("1d6!", 6, 6, 2)).toEqual([{ sides: 6, value: 14, kept: true, exploded: true }])
+    expect(dice("1d6!", 6, 6, 2)).toEqual([{ sides: 6, value: 14, kept: true, exploded: true, sign: 1 }])
   })
 
   it("понимает скобки и вычитание", () => {
@@ -44,6 +44,39 @@ describe("кубы из записи журнала", () => {
     expect(diceOf("1d20+1d6", "[14]")).toBeNull()
     expect(diceOf("1d20", "[x]")).toBeNull()
     expect(diceOf("не формула", "[1]")).toBeNull()
+  })
+})
+
+describe("кубы и модификатор для рисунка", () => {
+  const art = (formula: string, ...values: number[]) => {
+    const { expression, detail } = logged(formula, ...values)
+    return rollArtOf(expression, detail)
+  }
+
+  it("складывает все постоянные слагаемые в одно число", () => {
+    const result = art("1d20+1+1d4+5", 12, 3)
+    expect(result?.dice.map((die) => [die.sides, die.value, die.sign])).toEqual([
+      [20, 12, 1],
+      [4, 3, 1],
+    ])
+    expect(result?.modifier).toBe(6)
+    expect(result?.linear).toBe(true)
+  })
+
+  it("помнит знак у вычитаемых кубов и чисел", () => {
+    const result = art("10-1d6-2", 4)
+    expect(result?.dice.map((die) => die.sign)).toEqual([-1])
+    expect(result?.modifier).toBe(8)
+  })
+
+  it("переворачивает знак внутри скобок после минуса", () => {
+    const result = art("1d20-(1d4-3)", 9, 2)
+    expect(result?.dice.map((die) => die.sign)).toEqual([1, -1])
+    expect(result?.modifier).toBe(3)
+  })
+
+  it("помечает формулу с умножением как нелинейную", () => {
+    expect(art("(1d6+2)*2", 3)?.linear).toBe(false)
   })
 })
 
@@ -69,16 +102,16 @@ describe("натуральные 20 и 1", () => {
 
 describe("рисунки", () => {
   it("рисует d6 точками, остальные числом", () => {
-    expect(dieArt({ sides: 6, value: 5, kept: true, exploded: false })).toBe(
+    expect(dieArt({ sides: 6, value: 5, kept: true, exploded: false, sign: 1 })).toBe(
       [".-d6--.", "|o   o|", "|  o  |", "|o   o|", "'-----'"].join("\n"),
     )
-    expect(dieArt({ sides: 20, value: 17, kept: true, exploded: false })).toBe(
+    expect(dieArt({ sides: 20, value: 17, kept: true, exploded: false, sign: 1 })).toBe(
       [".-d20-.", "|     |", "| 17  |", "|     |", "'-----'"].join("\n"),
     )
   })
 
   it("расширяет рамку под длинное число", () => {
-    const rows = dieArt({ sides: 6, value: 1234, kept: true, exploded: true }).split("\n")
+    const rows = dieArt({ sides: 6, value: 1234, kept: true, exploded: true, sign: 1 }).split("\n")
     expect(new Set(rows.map((row) => row.length)).size).toBe(1)
     expect(rows[2]).toContain("1234")
   })

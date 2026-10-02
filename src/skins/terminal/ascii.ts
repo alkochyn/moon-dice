@@ -14,21 +14,45 @@ export interface AsciiDie {
   /** Отброшенный кубик (kh/kl, преимущество) рисуется приглушённо. */
   kept: boolean
   exploded: boolean
+  /** -1 — куб вычитается: `10-1d6`. */
+  sign: 1 | -1
 }
 
-const collectSides = (node: Node, out: number[]): void => {
+/**
+ * Бросок для рисунка: кубы со знаками и все постоянные слагаемые одним
+ * числом. `1d20+1+1d4+5` — это [d20] + [d4] + 6.
+ */
+export interface RollArt {
+  dice: AsciiDie[]
+  modifier: number
+  /**
+   * Только сложение и вычитание. В `(1d6+2)*2` кубы и модификатор в ряд
+   * через плюсы нарисовать нельзя — это была бы неправда, там нужен текст.
+   */
+  linear: boolean
+}
+
+interface Pool {
+  sides: number
+  sign: 1 | -1
+}
+
+/** Обходит дерево слева направо — в том же порядке, что и строка разбора. */
+const walk = (node: Node, sign: 1 | -1, out: { pools: Pool[]; modifier: number; linear: boolean }): void => {
   switch (node.kind) {
-    case "dice":
-      out.push(node.sides)
+    case "num":
+      out.modifier += sign * node.value
       return
-    case "binary":
-      collectSides(node.left, out)
-      collectSides(node.right, out)
+    case "dice":
+      out.pools.push({ sides: node.sides, sign })
       return
     case "unary":
-      collectSides(node.operand, out)
+      walk(node.operand, sign === 1 ? -1 : 1, out)
       return
-    case "num":
+    case "binary":
+      if (node.op === "*" || node.op === "/") out.linear = false
+      walk(node.left, sign, out)
+      walk(node.right, node.op === "-" ? (sign === 1 ? -1 : 1) : sign, out)
       return
   }
 }
@@ -40,34 +64,40 @@ const collectSides = (node: Node, out: number[]): void => {
  * порядке, что и кубы в дереве формулы (слева направо), так что грани берём
  * оттуда. Если что-то не сошлось — null, и скин покажет разбор текстом.
  */
-export const diceOf = (expression: string, detail: string): AsciiDie[] | null => {
-  const sides: number[] = []
+export const rollArtOf = (expression: string, detail: string): RollArt | null => {
+  const tree = { pools: [] as Pool[], modifier: 0, linear: true }
   try {
-    collectSides(parseFormula(expression).ast, sides)
+    walk(parseFormula(expression).ast, 1, tree)
   } catch {
     return null
   }
 
   const pools = [...detail.matchAll(/\[([^\]]*)\]/g)].map((match) => match[1] ?? "")
-  if (pools.length !== sides.length) return null
+  if (pools.length !== tree.pools.length) return null
 
   const dice: AsciiDie[] = []
   for (const [index, pool] of pools.entries()) {
+    const { sides, sign } = tree.pools[index] as Pool
     for (const raw of pool.split(",")) {
       const text = raw.trim()
       const chain = text.replace(/[()]/g, "").split("!").map(Number)
       if (!text || chain.some((n) => !Number.isFinite(n))) return null
       dice.push({
-        sides: sides[index] as number,
+        sides,
         value: chain.reduce((sum, n) => sum + n, 0),
         kept: !text.startsWith("("),
         exploded: chain.length > 1,
+        sign,
       })
     }
   }
 
-  return dice
+  return { dice, modifier: tree.modifier, linear: tree.linear }
 }
+
+/** Только кубы — для натуральных 20 и 1, им знаки и модификатор не важны. */
+export const diceOf = (expression: string, detail: string): AsciiDie[] | null =>
+  rollArtOf(expression, detail)?.dice ?? null
 
 export type Natural = "crit" | "fumble" | null
 
