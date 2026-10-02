@@ -1,0 +1,786 @@
+/*
+ * Скин «Терминал». Шрифт только системный моноширинный — правило проекта:
+ * никаких сторонних запросов при загрузке панели.
+ *
+ * Внутри .term переопределены и переменные обычного облика: вкладка боя,
+ * справка и настройки — те же компоненты, и так они сами берут цвета экрана.
+ */
+.term {
+  --t-bg: #100c06;
+  --t-fg: #ffb547;
+  --t-dim: #a8782c;
+  --t-hi: #ffe7b8;
+  --t-red: #ff6a4d;
+  --t-line: #4a3818;
+  --t-panel: rgba(16, 12, 6, 0.92);
+  --t-input: #21180b;
+  --t-glow: rgba(255, 181, 71, 0.35);
+
+  --bg: var(--t-bg);
+  --card: var(--t-bg);
+  --surface: var(--t-input);
+  --surface-2: var(--t-line);
+  --text: var(--t-fg);
+  --muted: var(--t-dim);
+  --border: var(--t-line);
+  --border-strong: var(--t-dim);
+  --accent: var(--t-fg);
+  --accent-soft: var(--t-line);
+  --accent-text: var(--t-bg);
+  --danger: var(--t-red);
+  --ok: var(--t-fg);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--t-bg);
+  color: var(--t-fg);
+  font: 12px/1.45 "Cascadia Mono", Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", "Liberation Mono", monospace;
+  color-scheme: dark;
+}
+
+.term--green {
+  --t-bg: #07100a;
+  --t-fg: #6cff8e;
+  --t-dim: #3e9a55;
+  --t-hi: #d9ffe3;
+  --t-line: #1b4a2a;
+  --t-panel: rgba(7, 16, 10, 0.92);
+  --t-input: #0d2214;
+  --t-glow: rgba(108, 255, 142, 0.3);
+}
+
+.term--ice {
+  --t-bg: #070c12;
+  --t-fg: #8fd3ff;
+  --t-dim: #5288ab;
+  --t-hi: #e6f5ff;
+  --t-red: #ff7a8a;
+  --t-line: #1d3a57;
+  --t-panel: rgba(7, 12, 18, 0.92);
+  --t-input: #0e1c2b;
+  --t-glow: rgba(143, 211, 255, 0.3);
+}
+
+/* Строки развёртки поверх всего — едва заметно, клики проходят насквозь. */
+.term::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.2) 3px);
+  opacity: 0.5;
+}
+
+.term pre {
+  margin: 0;
+  font: inherit;
+}
+
+.term button,
+.term input,
+.term select {
+  font-family: inherit;
+}
+
+.term-btn {
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.term-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.term-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.term :focus-visible {
+  outline: 1px dashed var(--t-hi);
+  outline-offset: 1px;
+}
+
+/* У полей ввода фокус и так виден: строка формулы светится, поля в SAVED
+   получают сплошное подчёркивание. Пунктир поверх — лишний. */
+.term input:not([type="checkbox"]):focus,
+.term select:focus {
+  outline: none;
+}
+
+/* --- Шапка и низ --- */
+.term__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 12px;
+  border-bottom: 1px dashed var(--t-line);
+  color: var(--t-dim);
+}
+
+.term__status--connected {
+  color: var(--t-fg);
+}
+
+.term__head-actions {
+  display: flex;
+  color: var(--t-fg);
+}
+
+.term__bar {
+  display: flex;
+  align-items: stretch;
+  background: var(--t-fg);
+  color: var(--t-bg);
+}
+
+.term__tab {
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.term__tab--active {
+  background: var(--t-bg);
+  color: var(--t-fg);
+}
+
+.term__post {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+/* Без доски стикеры класть некуда: переключатель заблокирован и должен это
+   показывать, а не прикидываться рабочим. */
+.term__post:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.term__post input {
+  margin: 0;
+  accent-color: var(--t-bg);
+}
+
+/* --- Экран: журнал и страницы --- */
+.term__screen {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Журнал течёт снизу вверх, как вывод в терминале: свежие броски у строки
+   ввода. column-reverse к тому же держит прокрутку прижатой к низу. */
+.term__feed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 20px;
+  padding: 18px 10px 12px;
+  overflow-y: auto;
+}
+
+.term__page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 10px;
+  overflow-y: auto;
+}
+
+.term__empty,
+.term__note {
+  margin: 0;
+  color: var(--t-dim);
+}
+
+.term__note code {
+  color: var(--t-fg);
+  font: inherit;
+}
+
+.term__feed::-webkit-scrollbar,
+.term__page::-webkit-scrollbar {
+  width: 6px;
+}
+
+.term__feed::-webkit-scrollbar-thumb,
+.term__page::-webkit-scrollbar-thumb {
+  background: var(--t-line);
+}
+
+/* --- Бросок в рамке --- */
+.term-entry {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 10px 10px;
+  border: 1px solid var(--t-dim);
+  background: var(--t-panel);
+}
+
+.term-entry--mine {
+  border-color: var(--t-fg);
+}
+
+.term-entry--crit {
+  border: 3px double var(--t-hi);
+}
+
+.term-entry--fumble {
+  border: 1px dashed var(--t-red);
+}
+
+.term-entry--burning {
+  border: 3px double #e2321a;
+}
+
+/* Подпись врезана в верхнюю кромку рамки: кто слева, что справа. */
+.term-entry__title {
+  position: absolute;
+  top: -9px;
+  left: 7px;
+  right: 7px;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.term-entry__who,
+.term-entry__what {
+  padding: 0 5px;
+  background: var(--t-bg);
+}
+
+.term-entry__what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.term-entry__time,
+.term-entry__label {
+  color: var(--t-dim);
+}
+
+.term-entry__user {
+  font-weight: 700;
+}
+
+.term-entry--mine .term-entry__user,
+.term-entry__expr {
+  color: var(--t-hi);
+}
+
+.term-entry__roll {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.term-entry__dice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.term .term-die {
+  color: var(--t-dim);
+  line-height: 1.12;
+}
+
+.term-die--dropped {
+  opacity: 0.4;
+}
+
+.term-entry__sum {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-self: center;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+/* Верхняя строка цифр — подчёркивания у нижнего края, поэтому рамка <pre>
+   начинается выше самих цифр. Поднимаем на полстроки, чтобы сумма
+   смотрелась по центру куба. */
+.term .term-entry__big {
+  position: relative;
+  top: -0.45em;
+  color: var(--t-fg);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 8px var(--t-glow);
+}
+
+.term-entry--crit .term-entry__big {
+  color: var(--t-hi);
+}
+
+.term-entry--fumble .term-entry__big {
+  color: var(--t-red);
+}
+
+.term-entry__detail {
+  color: var(--t-dim);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.term-entry__order,
+.term-entry__repeats {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.term-entry__order li,
+.term-entry__repeats li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--t-line);
+}
+
+.term-entry__order-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.term-entry__order-total {
+  color: var(--t-hi);
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Действия врезаны в нижнюю кромку, как подпись в верхнюю, и проявляются
+   только при наведении или фокусе — ленту читать не мешают. */
+.term-entry__actions {
+  position: absolute;
+  right: 7px;
+  bottom: -9px;
+  z-index: 1;
+  display: flex;
+  line-height: 16px;
+  color: var(--t-dim);
+  background: var(--t-bg);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.term-entry:hover .term-entry__actions,
+.term-entry:focus-within .term-entry__actions {
+  opacity: 1;
+}
+
+.term-entry__actions:empty {
+  display: none;
+}
+
+.term-entry__actions .term-btn {
+  padding: 0 4px;
+}
+
+.term-entry__actions .term-btn:hover {
+  color: var(--t-hi);
+}
+
+/* --- Пасхалки: меч с огнём и череп --- */
+.term-egg {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.term-entry__sword {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: center;
+  min-width: 0;
+  color: var(--t-hi);
+  text-shadow: 0 0 8px var(--t-glow);
+}
+
+/* Дорожка обрезает меч слева: если места мало, рукоять прячется за кубами,
+   а остриё смотрит на сумму. */
+.term-sword__track {
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.term .term-sword {
+  flex: none;
+  line-height: 1.15;
+}
+
+.term-sword--draw {
+  animation: term-draw 0.9s cubic-bezier(0.25, 0.8, 0.3, 1.1) both;
+}
+
+@keyframes term-draw {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.term-sword__label {
+  font-weight: 700;
+  text-align: right;
+}
+
+/* У черепа верх — подчёркивания внизу строки, а низ — зубы во всю строку,
+   поэтому на одной линии с кубом он кажется ниже на полстроки. */
+.term-skull {
+  position: relative;
+  top: -7px;
+  color: var(--t-red);
+  line-height: 1.12;
+  text-shadow: 0 0 6px rgba(255, 80, 60, 0.35);
+}
+
+/* Огонь всегда красный, какой бы ни был цвет экрана. */
+.term-fire {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.term-fire__flames {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  opacity: 0.9;
+}
+
+.term-fire__row {
+  font-size: 11px;
+  line-height: 11px;
+  white-space: pre;
+}
+
+.term-fire__row--0 { color: #4a0b06; }
+.term-fire__row--1 { color: #7a1309; }
+.term-fire__row--2 { color: #b01e0e; }
+.term-fire__row--3 { color: #e2321a; }
+.term-fire__row--4 { color: #ff5a2a; }
+.term-fire__row--5 { color: #ffb070; }
+
+/* --- Строка ввода: светится, пока не в фокусе, чтобы её было видно сразу --- */
+.term__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 8px 6px;
+  padding: 8px 6px 6px 10px;
+  background: var(--t-input);
+  color: var(--t-fg);
+  animation: term-breathe 2.6s ease-in-out infinite;
+}
+
+.term__box:focus-within {
+  animation: none;
+  box-shadow: 0 0 0 1px currentColor, 0 0 22px var(--t-glow);
+}
+
+@keyframes term-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px currentColor, 0 0 4px var(--t-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 1px currentColor, 0 0 18px var(--t-glow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-sword--draw {
+    animation: none;
+  }
+
+  .term__box {
+    animation: none;
+    box-shadow: 0 0 0 1px currentColor;
+  }
+}
+
+.term__box-title,
+.term__box-hint {
+  position: absolute;
+  top: -9px;
+  padding: 0 6px;
+  line-height: 16px;
+  background: var(--t-bg);
+}
+
+.term__box-title {
+  left: 8px;
+  font-weight: 700;
+}
+
+.term__box-hint {
+  right: 8px;
+  color: var(--t-dim);
+}
+
+.term__prompt {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.term__user {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.term__input {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--t-hi);
+  caret-color: var(--t-hi);
+  font: inherit;
+  font-size: 14px;
+}
+
+.term__input::placeholder {
+  color: inherit;
+  opacity: 0.4;
+}
+
+.term__roll {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  background: var(--t-fg);
+  color: var(--t-bg);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.term__roll:hover {
+  filter: brightness(1.15);
+}
+
+.term__roll:active {
+  transform: translateY(1px);
+}
+
+.term__error,
+.term__warning {
+  padding: 0 12px 4px;
+  color: var(--t-red);
+}
+
+.term__warning {
+  padding-top: 4px;
+}
+
+/* --- Кубы и горячие клавиши --- */
+.term__keys {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 6px;
+}
+
+.term__macros {
+  display: flex;
+  padding: 0 6px 4px;
+  color: var(--t-dim);
+}
+
+.term__macro {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.term__fkey {
+  color: var(--t-hi);
+}
+
+.term__edit {
+  flex: none;
+  color: var(--t-fg);
+}
+
+/* --- Свои броски --- */
+.term-saved {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.term-saved__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 2px 2px;
+}
+
+.term-saved__title {
+  color: var(--t-hi);
+  font-weight: 700;
+}
+
+.term-saved__hint,
+.term-saved__divider {
+  color: var(--t-dim);
+}
+
+.term-saved__divider {
+  padding: 6px 2px 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.term-saved__row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 2fr) minmax(0, 3fr) 18px 18px 18px;
+  gap: 5px;
+  align-items: center;
+  padding: 3px 6px;
+  border: 1px solid var(--t-line);
+  background: var(--t-panel);
+}
+
+.term-saved__row--key {
+  border-color: var(--t-fg);
+}
+
+.term-saved__key {
+  padding: 4px 0;
+  color: var(--t-dim);
+  font-weight: 700;
+}
+
+.term-saved__row--key .term-saved__key {
+  color: var(--t-hi);
+}
+
+.term-saved__icon {
+  padding: 4px 0;
+}
+
+.term-saved__remove {
+  color: var(--t-red);
+}
+
+.term-saved__field {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px dashed currentColor;
+  outline: none;
+  background: transparent;
+  color: var(--t-fg);
+  font: inherit;
+}
+
+.term-saved__name {
+  color: var(--t-hi);
+}
+
+.term-saved__field:focus {
+  border-bottom-style: solid;
+}
+
+.term-saved__field--invalid {
+  color: var(--t-red);
+}
+
+.term-saved__add {
+  align-self: flex-start;
+  color: var(--t-hi);
+}
+
+/* --- Вкладка боя и модальные окна в цветах экрана --- */
+.term__page--combat .combat {
+  padding: 0;
+}
+
+.term .modal {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.term .modal__card {
+  border: 1px solid var(--t-fg);
+  border-radius: 0;
+  box-shadow: 0 0 24px var(--t-glow);
+}
+
+.term .input,
+.term .btn {
+  border-radius: 0;
+}
+
+.term .btn--primary {
+  background: var(--t-fg);
+  color: var(--t-bg);
+}

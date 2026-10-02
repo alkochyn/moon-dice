@@ -4,6 +4,7 @@ import type { BoardStatus } from "../board/sdk"
 import { DICE_SETS } from "../data/diceSets"
 import { validateFormula } from "../dice"
 import { LANGS, useT, type Lang } from "../i18n"
+import { SKINS, type Skin } from "../skins"
 import { Diagnostics } from "./Diagnostics"
 
 import { ICONS, ICON_AUTHORS, ICON_IDS, ICON_VIEWBOX } from "../data/icons"
@@ -25,9 +26,11 @@ interface Props extends PlayerLook {
   status: BoardStatus
   diceSet: string
   lang: Lang
+  skin: Skin
   onSave: (look: PlayerLook) => void
   onDiceSetChange: (id: string) => void
   onLangChange: (lang: Lang) => void
+  onSkinChange: (skin: Skin) => void
   onClose: () => void
 }
 
@@ -40,15 +43,18 @@ export const PlayerSettings = ({
   status,
   diceSet,
   lang,
+  skin,
   onSave,
   onDiceSetChange,
   onLangChange,
+  onSkinChange,
   onClose,
 }: Props) => {
   const t = useT()
   const [name, setName] = useState(character)
   const [pickedSet, setPickedSet] = useState(diceSet)
   const [pickedLang, setPickedLang] = useState(lang)
+  const [pickedSkin, setPickedSkin] = useState(skin)
   const [pickedIcon, setPickedIcon] = useState(icon)
   const [pickedColor, setPickedColor] = useState(color)
   const [initiativeFormula, setInitiativeFormula] = useState(initiative)
@@ -88,6 +94,7 @@ export const PlayerSettings = ({
     })
     onDiceSetChange(pickedSet)
     onLangChange(pickedLang)
+    onSkinChange(pickedSkin)
     onClose()
   }
 
@@ -191,6 +198,22 @@ export const PlayerSettings = ({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="modal__field">
+          {t.settings.skin}
+          <select
+            className="input"
+            value={pickedSkin}
+            onChange={(event) => setPickedSkin((event.target as HTMLSelectElement).value as Skin)}
+          >
+            {SKINS.map((item) => (
+              <option key={item} value={item}>
+                {t.skins[item] ?? item}
+              </option>
+            ))}
+          </select>
+          <span className="modal__hint">{t.settings.skinHint}</span>
         </label>
 
         <label className="modal__field">

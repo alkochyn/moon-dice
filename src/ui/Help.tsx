@@ -4,6 +4,8 @@ import { LIMITS } from "../dice"
 import { useT } from "../i18n"
 
 interface Props {
+  /** В терминале своё управление: команды, F-клавиши, экран своих бросков. */
+  terminal?: boolean
   onClose: () => void
 }
 
@@ -21,7 +23,7 @@ const Table = ({ title, rows }: { title: string; rows: Array<[string, string]> }
   </>
 )
 
-export const Help = ({ onClose }: Props) => {
+export const Help = ({ terminal = false, onClose }: Props) => {
   const t = useT()
 
   useEffect(() => {
@@ -43,7 +45,11 @@ export const Help = ({ onClose }: Props) => {
         <div className="help">
           <Table title={t.help.formulas} rows={t.help.formulaRows} />
           <Table title={t.help.notation} rows={t.help.notationRows} />
-          <Table title={t.help.controls} rows={t.help.controlRows} />
+          {terminal ? (
+            <Table title={t.help.terminal} rows={t.help.terminalRows} />
+          ) : (
+            <Table title={t.help.controls} rows={t.help.controlRows} />
+          )}
 
           <p className="modal__hint">
             {t.help.limits(LIMITS.maxCount, LIMITS.maxSides, LIMITS.maxRepeat)}

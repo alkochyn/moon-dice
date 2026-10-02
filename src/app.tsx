@@ -44,6 +44,8 @@ import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { Help } from "./ui/Help"
 import { Combat } from "./ui/Combat"
 import { defaultColor, defaultIconId } from "./utils/avatar"
+import { DEFAULT_SKIN, isSkin, type Skin } from "./skins"
+import { Terminal } from "./skins/terminal/Terminal"
 
 const FORMULA_HISTORY_KEY = "dice.formulas.v1"
 const LOCAL_USER_KEY = "dice.localUserId.v1"
@@ -55,6 +57,7 @@ const CHARACTER_KEY = "dice.character.v1"
 const LOOK_KEY = "dice.look.v1"
 const INITIATIVE_KEY = "dice.initiative.v1"
 const LANG_KEY = "dice.lang.v1"
+const SKIN_KEY = "dice.skin.v1"
 const MAX_FORMULA_HISTORY = 50
 /** Как часто перечитываем журнал доски, пока подписка ненадёжна. */
 const POLL_INTERVAL_MS = 4000
@@ -85,6 +88,12 @@ const initialLang = (): Lang => {
   const saved = readJson<unknown>(LANG_KEY, null)
   if (isLang(saved)) return saved
   return navigator.language?.toLowerCase().startsWith("ru") ? "ru" : DEFAULT_LANG
+}
+
+/** Облик тоже читаем до первой отрисовки: иначе терминал мигал бы обычной панелью. */
+const initialSkin = (): Skin => {
+  const saved = readJson<unknown>(SKIN_KEY, DEFAULT_SKIN)
+  return isSkin(saved) ? saved : DEFAULT_SKIN
 }
 
 /** Пока доска не отвечает, броски всё равно должны подписываться кем-то стабильным. */
@@ -125,6 +134,7 @@ export const App = () => {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [lang, setLang] = useState<Lang>(initialLang)
+  const [skin, setSkin] = useState<Skin>(initialSkin)
   const t = STRINGS[lang]
 
   const changePanel = useCallback((next: Panel) => {
@@ -508,6 +518,11 @@ export const App = () => {
     setPersonal((box) => (box.updatedAt === 0 ? { ...box, items: defaultPresets(STRINGS[next].defaultPresets) } : box))
   }, [])
 
+  const changeSkin = useCallback((next: Skin) => {
+    setSkin(next)
+    writeJson(SKIN_KEY, next)
+  }, [])
+
   const toggleDiceCollapsed = useCallback(() => {
     setDiceCollapsed((collapsed) => {
       writeJson(DICE_COLLAPSED_KEY, !collapsed)
@@ -529,6 +544,15 @@ export const App = () => {
     roll(source)
   }
 
+  // В терминале «сохранить» всегда кладёт в свои броски: вкладки «Общие»
+  // там нет, а scope остался бы от обычного облика.
+  const saveEntryToMine = (entry: RollEntry): void => {
+    const items = personalRef.current.items
+    const name = entry.label ?? ""
+    if (items.some((item) => item.formula === entry.expression && item.name === name)) return
+    savePersonal([...items, makePreset(name, entry.expression, "slate")])
+  }
+
   const combat = (
     <Combat
       connected={status === "connected"}
@@ -539,7 +563,7 @@ export const App = () => {
 
   const modals = (
     <>
-      {helpOpen && <Help onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <Help terminal={skin === "terminal"} onClose={() => setHelpOpen(false)} />}
 
       {settingsOpen && (
         <PlayerSettings
@@ -550,15 +574,53 @@ export const App = () => {
           status={status}
           diceSet={diceSet}
           lang={lang}
+          skin={skin}
           {...(user ? { accountName: user.name } : {})}
           onSave={savePlayerLook}
           onDiceSetChange={changeDiceSet}
           onLangChange={changeLang}
+          onSkinChange={changeSkin}
           onClose={() => setSettingsOpen(false)}
         />
       )}
     </>
   )
+
+  // Терминал — другой облик тех же данных: журнал, сохранённые броски и бой
+  // общие с обычной панелью, переключение их не трогает.
+  if (skin === "terminal") {
+    return (
+      <LangContext.Provider value={t}>
+        <Terminal
+          status={status}
+          shareError={shareError}
+          entries={entries}
+          currentUserId={playerId}
+          playerName={playerName}
+          diceSet={diceSet}
+          personal={personal.items}
+          shared={shared}
+          formula={formula}
+          error={error}
+          formulaHistory={formulaHistory}
+          postToBoard={postToBoard}
+          combat={combat}
+          onFormulaChange={setFormula}
+          onDismissError={() => setError(null)}
+          onRoll={roll}
+          onSavePersonal={savePersonal}
+          onSaveShared={saveShared}
+          onRepeat={repeatEntry}
+          onSaveEntry={saveEntryToMine}
+          onTogglePostToBoard={togglePostToBoard}
+          onOpenHelp={() => setHelpOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+        >
+          {modals}
+        </Terminal>
+      </LangContext.Provider>
+    )
+  }
 
   return (
     <LangContext.Provider value={t}>

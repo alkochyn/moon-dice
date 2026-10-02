@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "preact/hooks"
+
 import type { RollEntry } from "../board/log"
 import { useT } from "../i18n"
 import { Avatar } from "./Avatar"
@@ -79,6 +81,18 @@ const InitiativeEntry = ({ entry, locale }: { entry: RollEntry; locale: string }
 
 export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => {
   const t = useT()
+  const logRef = useRef<HTMLDivElement>(null)
+  const topId = useRef<string | undefined>(undefined)
+
+  // Свой бросок появляется сверху; если историю отмотали вниз, возвращаем к
+  // нему. Чужие броски прокрутку не трогают — вдруг игрок что-то читает.
+  const newest = entries[0]
+  useEffect(() => {
+    const previous = topId.current
+    topId.current = newest?.id
+    if (!newest || !previous || newest.id === previous || newest.userId !== currentUserId) return
+    logRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+  }, [newest, currentUserId])
 
   return (
   <section className="section section--log">
@@ -89,7 +103,7 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
     {entries.length === 0 ? (
       <div className="empty">{t.log.empty}</div>
     ) : (
-      <div className="log">
+      <div ref={logRef} className="log">
         {entries.map((entry) => {
           if (entry.kind === "initiative") return <InitiativeEntry key={entry.id} entry={entry} locale={t.locale} />
 
