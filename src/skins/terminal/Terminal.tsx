@@ -663,8 +663,22 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
               с ним. Ключ по токену перезапускает анимацию на каждом поджиге. */}
           {natural === "crit" && burnToken ? (
             <div className="term-sword__track" aria-hidden="true">
+              {/* Фон только под штрихами клинка: в пробелах вокруг него виден огонь. */}
               <pre key={burnToken} className="term-sword">
-                {SWORD}
+                {SWORD.split("\n").map((line, row) => (
+                  <Fragment key={row}>
+                    {row > 0 && "\n"}
+                    {line.split(/(\s+)/).map((part, index) =>
+                      part.trim() ? (
+                        <span key={index} className="term-sword__ink">
+                          {part}
+                        </span>
+                      ) : (
+                        part
+                      ),
+                    )}
+                  </Fragment>
+                ))}
               </pre>
             </div>
           ) : null}

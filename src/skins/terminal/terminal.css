@@ -485,12 +485,16 @@
 
 .term .term-sword {
   width: max-content;
-  padding: 2px 6px 2px 0;
-  background: var(--t-bg);
   color: var(--t-hi);
   line-height: 1.15;
   text-shadow: 0 0 8px var(--t-glow);
   animation: term-draw 2.6s cubic-bezier(0.25, 0.8, 0.3, 1.1) both;
+}
+
+/* Подложка только под символами меча, чтобы кубы под ним не мешались со
+   штрихами, а огонь вокруг оставался виден. */
+.term-sword__ink {
+  background: var(--t-bg);
 }
 
 @keyframes term-draw {
