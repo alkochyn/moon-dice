@@ -599,23 +599,14 @@
   }
 }
 
-.term__box-title,
-.term__box-hint {
+.term__box-title {
   position: absolute;
   top: -9px;
+  left: 8px;
   padding: 0 6px;
   line-height: 16px;
   background: var(--t-bg);
-}
-
-.term__box-title {
-  left: 8px;
   font-weight: 700;
-}
-
-.term__box-hint {
-  right: 8px;
-  color: var(--t-dim);
 }
 
 .term__prompt {

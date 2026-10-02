@@ -442,7 +442,6 @@ export const Terminal = ({
 
       <div className="term__box">
         <span className="term__box-title">[ {t.term.formula} ]</span>
-        <span className="term__box-hint">{t.term.orEnter}</span>
         <label className="term__prompt">
           <span className="term__user">{promptOf(playerName)} $</span>
           <input
