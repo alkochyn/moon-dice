@@ -46,7 +46,6 @@ interface Props {
   shareError: string | null
   entries: RollEntry[]
   currentUserId: string
-  playerName: string
   diceSet: string
   personal: Preset[]
   shared: Preset[]
@@ -82,10 +81,6 @@ const readScreen = (): Screen => {
 
 const clock = (ts: number, locale: string): string =>
   new Date(ts).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
-
-/** Имя в приглашении — первое слово персонажа, как логин в шелле. */
-const promptOf = (name: string): string =>
-  (name.trim().split(/\s+/)[0] ?? "").toLowerCase().slice(0, 12) || "player"
 
 /** Огонь в рамке броска: своя анимация, родитель при этом не перерисовывается. */
 const Fire = ({ token, onDone }: { token: number; onDone: () => void }) => {
@@ -169,7 +164,6 @@ export const Terminal = ({
   shareError,
   entries,
   currentUserId,
-  playerName,
   diceSet,
   personal,
   shared,
@@ -443,7 +437,9 @@ export const Terminal = ({
       <div className="term__box">
         <span className="term__box-title">[ {t.term.formula} ]</span>
         <label className="term__prompt">
-          <span className="term__user">{promptOf(playerName)} $</span>
+          <span className="term__user" aria-hidden="true">
+            &gt;
+          </span>
           <input
             className="term__input"
             type="text"

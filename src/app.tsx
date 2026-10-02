@@ -596,7 +596,6 @@ export const App = () => {
           shareError={shareError}
           entries={entries}
           currentUserId={playerId}
-          playerName={playerName}
           diceSet={diceSet}
           personal={personal.items}
           shared={shared}
