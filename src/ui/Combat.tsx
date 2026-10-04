@@ -9,6 +9,9 @@ import { Avatar } from "./Avatar"
 import { SwordsIcon } from "./icons"
 
 const MONSTERS_KEY = "dice.combat.monsters.v1"
+/** Формулы, вписанные мастером игрокам, и галочки участия — по userId. */
+const OVERRIDES_KEY = "dice.combat.overrides.v1"
+const INCLUDED_KEY = "dice.combat.included.v1"
 /** Как часто перечитываем, кто на доске, пока вкладка открыта. */
 const REFRESH_MS = 5000
 
@@ -44,28 +47,48 @@ const readMonsters = (): MonsterItem[] => {
   }
 }
 
-const writeMonsters = (items: MonsterItem[]): void => {
+const writeStored = (key: string, value: unknown): void => {
   try {
-    localStorage.setItem(MONSTERS_KEY, JSON.stringify(items))
+    localStorage.setItem(key, JSON.stringify(value))
   } catch {
-    // Список останется в памяти до конца сессии.
+    // Значение останется в памяти до конца сессии.
   }
 }
+
+/** Словарь по userId; всё, что не того типа, молча отбрасываем. */
+const readRecord = <T extends string | boolean>(key: string, type: "string" | "boolean"): Record<string, T> => {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "{}")
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
+    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => typeof value === type)) as Record<string, T>
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Пустую правку не храним: стёртое поле после перезагрузки снова покажет
+ * формулу из настроек игрока, а не залипнет пустым навсегда.
+ */
+const writeOverrides = (overrides: Record<string, string>): void =>
+  writeStored(OVERRIDES_KEY, Object.fromEntries(Object.entries(overrides).filter(([, value]) => value.trim())))
 
 /**
  * Вкладка мастера. Игроки — все, кто сейчас на доске, со своими формулами из
  * настроек; монстры — список мастера, он живёт в его браузере между боями.
  * Одна кнопка кидает за всех и отдаёт порядок в общий журнал.
  *
- * Формулу игрока здесь можно поправить на один бой (забыл вписать, сработала
- * способность) — в его настройки правка не уходит.
+ * Формулу игрока здесь можно поправить (не вписал свою, сработала
+ * способность) — в его настройки правка не уходит, но у мастера запоминается
+ * вместе с галочками участия: кидают часто, а состав и формулы почти не
+ * меняются.
  */
 export const Combat = ({ connected, self, onRoll }: Props) => {
   const t = useT()
   const [rows, setRows] = useState<PlayerRow[]>([])
   const [onlineFailed, setOnlineFailed] = useState(false)
-  const [included, setIncluded] = useState<Record<string, boolean>>({})
-  const [overrides, setOverrides] = useState<Record<string, string>>({})
+  const [included, setIncluded] = useState<Record<string, boolean>>(() => readRecord(INCLUDED_KEY, "boolean"))
+  const [overrides, setOverrides] = useState<Record<string, string>>(() => readRecord(OVERRIDES_KEY, "string"))
   const [monsters, setMonsters] = useState<MonsterItem[]>(readMonsters)
   const [draft, setDraft] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -119,7 +142,19 @@ export const Combat = ({ connected, self, onRoll }: Props) => {
 
   const saveMonsters = (next: MonsterItem[]): void => {
     setMonsters(next)
-    writeMonsters(next)
+    writeStored(MONSTERS_KEY, next)
+  }
+
+  const setOverride = (userId: string, formula: string): void => {
+    const next = { ...overrides, [userId]: formula }
+    setOverrides(next)
+    writeOverrides(next)
+  }
+
+  const setIncludedFor = (userId: string, on: boolean): void => {
+    const next = { ...included, [userId]: on }
+    setIncluded(next)
+    writeStored(INCLUDED_KEY, next)
   }
 
   const addMonster = (): void => {
@@ -199,9 +234,7 @@ export const Combat = ({ connected, self, onRoll }: Props) => {
             <input
               type="checkbox"
               checked={isIncluded(row)}
-              onChange={(event) =>
-                setIncluded((prev) => ({ ...prev, [row.userId]: (event.target as HTMLInputElement).checked }))
-              }
+              onChange={(event) => setIncludedFor(row.userId, (event.target as HTMLInputElement).checked)}
             />
             <Avatar
               name={row.name}
@@ -221,9 +254,7 @@ export const Combat = ({ connected, self, onRoll }: Props) => {
               placeholder={DEFAULT_INITIATIVE}
               aria-label={t.combat.formulaFor(row.name)}
               value={formula}
-              onInput={(event) =>
-                setOverrides((prev) => ({ ...prev, [row.userId]: (event.target as HTMLInputElement).value }))
-              }
+              onInput={(event) => setOverride(row.userId, (event.target as HTMLInputElement).value)}
             />
           </label>
         )
