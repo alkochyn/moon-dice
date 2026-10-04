@@ -295,10 +295,11 @@ export const App = () => {
   }, [])
 
   /**
-   * Запись в журнал: у себя сразу, на доску следом. lines — текст стикера,
-   * если игрок включил дублирование бросков на доску.
+   * Запись в журнал: у себя сразу, на доску следом. stickers — строки
+   * стикеров (по массиву на стикер), если игрок включил дублирование бросков
+   * на доску.
    */
-  const publish = useCallback((entry: RollEntry, lines: string[]) => {
+  const publish = useCallback((entry: RollEntry, stickers: string[][]) => {
     // Своя запись показывается сразу, не дожидаясь ответа доски.
     setEntries((prev) => {
       const merged = mergeEntries(prev, [entry])
@@ -313,7 +314,7 @@ export const App = () => {
     void publishEntry(entry).then((published) => {
       setShareError(published ? null : tRef.current.errors.publishFailed)
     })
-    if (postToBoardRef.current) void postRollToBoard(lines)
+    if (postToBoardRef.current) void postRollToBoard(stickers)
   }, [])
 
   /**
@@ -355,8 +356,10 @@ export const App = () => {
 
       rememberFormula(source)
       publish(entry, [
-        `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
-        ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
+        [
+          `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
+          ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
+        ],
       ])
     },
     [publish, rememberFormula, user],
@@ -386,10 +389,12 @@ export const App = () => {
         results: order,
       }
 
-      publish(entry, [
-        strings.combat.title,
-        ...order.map((item, index) => `${index + 1}. ${item.name} — ${item.total}`),
-      ])
+      // На доску — по стикеру на участника, столбиком в порядке ходов: так
+      // мастер может двигать и снимать их по одному по ходу боя.
+      publish(
+        entry,
+        order.map((item, index) => [`${index + 1}. ${item.name} — ${item.total}`]),
+      )
     },
     [publish, user],
   )
