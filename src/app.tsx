@@ -396,7 +396,7 @@ export const App = () => {
       publish(
         entry,
         order.map((item, index) => ({
-          lines: [`${item.total} — ${item.name}`],
+          lines: [`${item.total} ${item.name}`],
           color: STICKY_PALETTE[index % STICKY_PALETTE.length],
           shape: "rectangle",
         })),

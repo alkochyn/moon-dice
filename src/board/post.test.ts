@@ -46,12 +46,12 @@ describe("стикеры броска на доске", () => {
   it("инициатива — по стикеру на участника, столбиком сверху вниз по центру", async () => {
     const created = fakeBoard()
     await postRollToBoard([
-      { lines: ["18 — Арвен"], color: "light_yellow", shape: "rectangle" },
-      { lines: ["12 — Гоблин 1"], color: "light_green", shape: "rectangle" },
-      { lines: ["7 — Гоблин 2"], color: "light_blue", shape: "rectangle" },
+      { lines: ["18 Арвен"], color: "light_yellow", shape: "rectangle" },
+      { lines: ["12 Гоблин 1"], color: "light_green", shape: "rectangle" },
+      { lines: ["7 Гоблин 2"], color: "light_blue", shape: "rectangle" },
     ])
 
-    expect(created.map((sticky) => sticky.content)).toEqual(["18 — Арвен", "12 — Гоблин 1", "7 — Гоблин 2"])
+    expect(created.map((sticky) => sticky.content)).toEqual(["18 Арвен", "12 Гоблин 1", "7 Гоблин 2"])
     expect(created.map((sticky) => sticky.style?.fillColor)).toEqual(["light_yellow", "light_green", "light_blue"])
     expect(created.every((sticky) => sticky.shape === "rectangle")).toBe(true)
     expect(created.every((sticky) => sticky.x === 500)).toBe(true)
@@ -64,6 +64,6 @@ describe("стикеры броска на доске", () => {
   })
 
   it("без доски ничего не постит", async () => {
-    expect(await postRollToBoard([{ lines: ["18 — Арвен"] }])).toBe(false)
+    expect(await postRollToBoard([{ lines: ["18 Арвен"] }])).toBe(false)
   })
 })
