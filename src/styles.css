@@ -1316,16 +1316,32 @@ button {
 
 /* --- Бой: вкладка мастера --- */
 /*
- * Своя прокрутка с потолком, как у сохранённых бросков: игроков и монстров
- * может набраться десяток, а журналу под вкладкой нужно место.
+ * Потолок по высоте, чтобы журналу под вкладкой осталось место. Прокручивается
+ * только список участников: поле для монстра и кнопка броска всегда на виду.
  */
 .combat {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  max-height: 40vh;
-  overflow-y: auto;
+  gap: 8px;
+  max-height: 60vh;
+  min-height: 0;
   font-size: 13px;
+}
+
+.combat__list {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.combat__footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .combat__head {
@@ -1357,21 +1373,48 @@ button {
   margin: 0;
 }
 
-.combat__name,
-.combat__monster {
+/*
+ * Имя и строка монстра — поля ввода, но выглядят текстом: мастер правит их
+ * редко, а рамка у каждой строки превратила бы список в анкету. Рамка
+ * проявляется под курсором и в фокусе.
+ */
+.combat__name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.combat__name:hover {
+  border-color: var(--border);
+}
+
+.combat__name:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.combat__name--invalid {
+  color: var(--danger);
 }
 
 .combat__monster {
   font-variant-numeric: tabular-nums;
 }
 
-.combat__you {
-  color: var(--muted);
+/* Игрок вышел из Miro, но в бою остаётся — приглушён, чтобы было видно, кого нет. */
+.combat__row--away > :not(input[type="checkbox"]):not(.btn) {
+  opacity: 0.55;
+}
+
+.combat__help[aria-expanded="true"] {
+  color: var(--accent);
 }
 
 /* Формулы игроков короткие: `1d20+2`, `1d16-1`. Узкое поле оставляет имени
@@ -1383,6 +1426,7 @@ button {
 
 .combat__add {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
@@ -1397,7 +1441,6 @@ button {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 4px;
   font-weight: 600;
 }
 

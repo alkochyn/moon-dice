@@ -30,7 +30,7 @@ import {
   type Preset,
   type PresetBox,
 } from "./board/presets"
-import { postRollToBoard } from "./board/post"
+import { postRollToBoard, STICKY_PALETTE, type Sticker } from "./board/post"
 import { publishProfile } from "./board/players"
 import { rollInitiative, type Combatant } from "./combat/initiative"
 import { StatusBar } from "./ui/StatusBar"
@@ -295,11 +295,10 @@ export const App = () => {
   }, [])
 
   /**
-   * Запись в журнал: у себя сразу, на доску следом. stickers — строки
-   * стикеров (по массиву на стикер), если игрок включил дублирование бросков
-   * на доску.
+   * Запись в журнал: у себя сразу, на доску следом. stickers уходят на доску,
+   * если игрок включил дублирование бросков.
    */
-  const publish = useCallback((entry: RollEntry, stickers: string[][]) => {
+  const publish = useCallback((entry: RollEntry, stickers: Sticker[]) => {
     // Своя запись показывается сразу, не дожидаясь ответа доски.
     setEntries((prev) => {
       const merged = mergeEntries(prev, [entry])
@@ -356,10 +355,12 @@ export const App = () => {
 
       rememberFormula(source)
       publish(entry, [
-        [
-          `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
-          ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
-        ],
+        {
+          lines: [
+            `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
+            ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
+          ],
+        },
       ])
     },
     [publish, rememberFormula, user],
@@ -390,10 +391,15 @@ export const App = () => {
       }
 
       // На доску — по стикеру на участника, столбиком в порядке ходов: так
-      // мастер может двигать и снимать их по одному по ходу боя.
+      // мастер может двигать и снимать их по одному по ходу боя. Число
+      // впереди: по нему глаз и ищет, чей ход.
       publish(
         entry,
-        order.map((item, index) => [`${index + 1}. ${item.name} — ${item.total}`]),
+        order.map((item, index) => ({
+          lines: [`${item.total} — ${item.name}`],
+          color: STICKY_PALETTE[index % STICKY_PALETTE.length],
+          shape: "rectangle",
+        })),
       )
     },
     [publish, user],
@@ -561,7 +567,7 @@ export const App = () => {
   const combat = (
     <Combat
       connected={status === "connected"}
-      self={{ userId: playerId, name: playerName, icon: playerIcon, color: playerColor, initiative }}
+      selfId={playerId}
       onRoll={rollCombat}
     />
   )
