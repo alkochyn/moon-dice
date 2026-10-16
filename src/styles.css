@@ -987,8 +987,9 @@ button {
 /*
  * Сумма одиночного броска — плитка справа во всю высоту карточки, как у
  * повторных, только крупнее: сумма, под ней расклад. Длинный расклад вроде
- * 8d6+2d4 переносится на вторую строку, дальше обрезается — полный виден
- * подсказкой. Рамка не шире трети карточки, чтобы не зажимать имя и формулу.
+ * 29d6 из Tunnels & Trolls не обрезается, а переносится сколько нужно строк:
+ * плитка растёт вниз вместе с карточкой — каждый куб должно быть видно.
+ * Рамка не шире трети карточки, чтобы не зажимать имя и формулу.
  */
 .entry__total {
   display: flex;
@@ -1013,12 +1014,6 @@ button {
 }
 
 .entry__total .entry__tile-detail {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  white-space: normal;
-  overflow-wrap: anywhere;
   text-align: center;
 }
 
@@ -1056,11 +1051,12 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* Расклад переносится по запятым, а не обрезается: у повторного броска
+   вроде 3#29d6 плитка так же растёт вниз. */
 .entry__tile-detail {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: center;
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
