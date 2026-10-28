@@ -173,69 +173,66 @@ export const Tables = ({ onRolled }: Props) => {
         {items.length === 0 && <p className="combat__hint">{t.tables.empty}</p>}
 
         {items.map((item) => (
-          <div key={item.id} className="tables__item">
-            <div className="combat__row tables__row">
-              <button
-                className="tables__roll"
-                disabled={busy !== null}
-                onClick={() => void roll(item)}
-                aria-label={t.tables.roll(item.title)}
-                title={item.generator}
+          <div key={item.id} className="combat__row tables__row">
+            <button
+              className="tables__roll"
+              disabled={busy !== null}
+              onClick={() => void roll(item)}
+              aria-label={t.tables.roll(item.title)}
+              title={item.generator}
+            >
+              <ScrollIcon />
+              <span className="tables__title">{item.title}</span>
+            </button>
+
+            {/* Подпись поля — в подсказке внутри него: с подписью рядом даже
+                одно поле не влезало в строку с названием и списком. */}
+            {item.inputs.map((input) => (
+              <input
+                key={input.name}
+                className="input input--compact tables__input"
+                type="text"
+                autocomplete="off"
+                spellcheck={false}
+                maxLength={MAX_INPUT_LENGTH}
+                placeholder={input.label}
+                aria-label={input.label}
+                title={input.label}
+                value={item.values[input.name] ?? ""}
+                onInput={(event) => {
+                  const value = (event.target as HTMLInputElement).value
+                  update(item.id, (other) => ({ ...other, values: { ...other.values, [input.name]: value } }))
+                }}
+                onKeyDown={(event) => event.key === "Enter" && void roll(item)}
+              />
+            ))}
+
+            {item.lists.length > 1 && (
+              <select
+                className="tables__list"
+                value={item.list}
+                aria-label={t.tables.listFor(item.title)}
+                onChange={(event) => {
+                  const list = (event.target as HTMLSelectElement).value
+                  update(item.id, (other) => ({ ...other, list }))
+                }}
               >
-                <ScrollIcon />
-                <span className="tables__title">{item.title}</span>
-              </button>
-
-              {item.lists.length > 1 && (
-                <select
-                  className="tables__list"
-                  value={item.list}
-                  aria-label={t.tables.listFor(item.title)}
-                  onChange={(event) => {
-                    const list = (event.target as HTMLSelectElement).value
-                    update(item.id, (other) => ({ ...other, list }))
-                  }}
-                >
-                  {item.lists.map((list) => (
-                    <option key={list} value={list}>
-                      {listLabel(list)}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <button
-                className="btn btn--ghost btn--icon"
-                onClick={() => save(itemsRef.current.filter((other) => other.id !== item.id))}
-                aria-label={t.tables.remove(item.title)}
-                title={t.tables.remove(item.title)}
-              >
-                ×
-              </button>
-            </div>
-
-            {item.inputs.length > 0 && (
-              <div className="tables__inputs">
-                {item.inputs.map((input) => (
-                  <label key={input.name} className="tables__input">
-                    <span className="tables__label">{input.label}</span>
-                    <input
-                      className="input input--compact"
-                      type="text"
-                      autocomplete="off"
-                      spellcheck={false}
-                      maxLength={MAX_INPUT_LENGTH}
-                      value={item.values[input.name] ?? ""}
-                      onInput={(event) => {
-                        const value = (event.target as HTMLInputElement).value
-                        update(item.id, (other) => ({ ...other, values: { ...other.values, [input.name]: value } }))
-                      }}
-                      onKeyDown={(event) => event.key === "Enter" && void roll(item)}
-                    />
-                  </label>
+                {item.lists.map((list) => (
+                  <option key={list} value={list}>
+                    {listLabel(list)}
+                  </option>
                 ))}
-              </div>
+              </select>
             )}
+
+            <button
+              className="btn btn--ghost btn--icon"
+              onClick={() => save(itemsRef.current.filter((other) => other.id !== item.id))}
+              aria-label={t.tables.remove(item.title)}
+              title={t.tables.remove(item.title)}
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>

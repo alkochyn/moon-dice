@@ -1601,35 +1601,41 @@ button {
 }
 
 /*
- * Поля генератора — под строкой таблицы, подпись слева. Поле узкое: туда
- * вводят модификатор, а не текст.
+ * Поля генератора стоят в строке таблицы, между названием и списком. Если
+ * полей много и строка не вмещает их рядом с названием, строка переносится:
+ * название не сжимается в многоточие уже на втором поле.
  */
-.tables__item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tables__inputs {
-  display: flex;
+.tables__row {
   flex-wrap: wrap;
-  gap: 4px 10px;
-  padding-left: 8px;
+  row-gap: 4px;
 }
 
+.tables__row .tables__roll {
+  flex-basis: 110px;
+}
+
+/* Поле узкое: туда вводят модификатор, а не текст. */
 .tables__input {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
+  flex: none;
+  width: 72px;
+  padding: 3px 6px;
   font-size: 12px;
-  color: var(--muted);
 }
 
-.tables__input .input {
-  flex: none;
-  width: 64px;
-  font-size: 12px;
+/* Где браузер умеет, поле и список по размеру содержимого: пустое поле —
+   по подсказке, заполненное «-1» — в пару символов, а список — по выбранному
+   «d8», а не по самому длинному «главному выводу». */
+@supports (field-sizing: content) {
+  .tables__input {
+    field-sizing: content;
+    width: auto;
+    min-width: 36px;
+    max-width: 120px;
+  }
+
+  .tables__list {
+    field-sizing: content;
+  }
 }
 
 /* --- Таблицы в журнале --- */
