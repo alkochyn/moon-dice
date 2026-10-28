@@ -110,7 +110,7 @@ const en = {
     placeholder: "perchance.org/… or generator name",
     add: "Add",
     adding: "Loading…",
-    main: "main output",
+    main: "main",
     listFor: (name: string) => `List to roll in ${name}`,
     roll: (name: string) => `Roll ${name}`,
     remove: (name: string) => `Remove ${name}`,
@@ -460,7 +460,8 @@ const ru: Strings = {
     placeholder: "perchance.org/… или имя генератора",
     add: "Добавить",
     adding: "Загрузка…",
-    main: "главный вывод",
+    // Коротко: список стоит в одной строке с названием и полями генератора.
+    main: "main",
     listFor: (name) => `Какой список кидать в ${name}`,
     roll: (name) => `Бросить ${name}`,
     remove: (name) => `Убрать ${name}`,
