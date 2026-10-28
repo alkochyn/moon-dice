@@ -45,7 +45,7 @@ import { RollLog } from "./ui/RollLog"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { Help } from "./ui/Help"
 import { Combat } from "./ui/Combat"
-import { Tables, type TableRoll } from "./ui/Tables"
+import { readInputValues, Tables, type TableRoll } from "./ui/Tables"
 import { PerchanceError, rollTable } from "./perchance"
 import { defaultColor, defaultIconId } from "./utils/avatar"
 import { DEFAULT_SKIN, isSkin, type Skin } from "./skins"
@@ -449,7 +449,11 @@ export const App = () => {
         // и текст под нулём — лучше, чем пустая карточка.
         expression: table.generator,
         label: table.title,
-        table: { generator: table.generator, ...(table.list ? { list: table.list } : {}) },
+        table: {
+          generator: table.generator,
+          ...(table.list ? { list: table.list } : {}),
+          ...(Object.keys(table.inputs).length > 0 ? { inputs: table.inputs } : {}),
+        },
         results: [{ total: 0, detail }],
       }
 
@@ -465,10 +469,13 @@ export const App = () => {
       if (!table) return
       const title = entry.label ?? table.generator
 
-      rollTable(table.generator, table.list ?? "").then(
+      // Журнал общий: в записи с чужой доски inputs может оказаться чем угодно.
+      const inputs = readInputValues(table.inputs)
+
+      rollTable(table.generator, table.list ?? "", inputs).then(
         (text) => {
           setError(null)
-          publishTable({ generator: table.generator, list: table.list ?? "", title }, text)
+          publishTable({ generator: table.generator, list: table.list ?? "", title, inputs }, text)
         },
         (failure: unknown) => {
           const strings = tRef.current

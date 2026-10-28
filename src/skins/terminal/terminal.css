@@ -806,9 +806,20 @@
   color: var(--t-bg);
 }
 
-/* Результат таблицы perchance: текст как есть, с переносами абзацев. */
+/*
+ * Результат таблицы perchance: текст как есть, с переносами абзацев. Рамка
+ * пунктиром и полоса слева отличают его от бросков кубов — цвет в терминале
+ * один, различать приходится формой.
+ */
+.term-entry--table {
+  border-style: dotted;
+}
+
 .term-entry__text {
   margin: 4px 0 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--t-dim);
+  color: var(--t-hi);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }

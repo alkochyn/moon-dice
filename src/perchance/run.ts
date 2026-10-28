@@ -61,11 +61,34 @@ class Consumable {
   ) {}
 }
 
+/**
+ * Поле ввода со страницы генератора. На perchance.org это элемент с id,
+ * и генератор читает его как `[luckInput.value]` — здесь то же самое.
+ */
+class Field {
+  constructor(readonly value: string) {}
+}
+
 type Fn = (...args: Value[]) => Value
-type Value = string | number | boolean | null | undefined | Node | Missing | Consumable | Fn | Value[]
+type Value = string | number | boolean | null | undefined | Node | Missing | Consumable | Field | Fn | Value[]
 
 /** Генераторы, которые пришли с сервера: имя → код. */
 export type Sources = Record<string, string>
+
+/** Что игрок ввёл в поля генератора: id поля → текст. */
+export type InputValues = Record<string, string>
+
+/** Поле, которое генератор просит заполнить: id и подпись. */
+export interface GeneratorInput {
+  name: string
+  label: string
+}
+
+/**
+ * Список полей генератора. Страница perchance сюда не приезжает, поэтому
+ * поля генератор объявляет сам — `luckInput = Luck modifier` в списке `$inputs`.
+ */
+const INPUTS_LIST = "$inputs"
 
 /** Предохранители от зацикленных генераторов: самоссылка не должна вешать панель. */
 const MAX_DEPTH = 120
@@ -112,6 +135,7 @@ class Runtime {
   constructor(
     private readonly sources: Sources,
     private readonly random: Random,
+    private readonly inputs: InputValues = {},
   ) {}
 
   root(name: string): ListNode {
@@ -190,6 +214,7 @@ class Runtime {
   render(value: Value): string {
     if (value instanceof Missing) throw new PerchanceError("unknownName", value.name)
     if (value instanceof Consumable) return this.render(this.consume(value))
+    if (value instanceof Field) return value.value
     if (typeof value === "function") throw new PerchanceError("unsupported", "function")
     if (Array.isArray(value)) return value.map((item) => this.render(item)).join(",")
     if (isNode(value)) return this.renderNode(value)
@@ -299,7 +324,9 @@ class Runtime {
   primitive(value: Value): string | number | boolean | null | undefined {
     if (value instanceof Missing) return undefined
     if (typeof value === "function") throw new PerchanceError("unsupported", "function")
-    if (isNode(value) || value instanceof Consumable || Array.isArray(value)) return this.render(value)
+    if (isNode(value) || value instanceof Consumable || value instanceof Field || Array.isArray(value)) {
+      return this.render(value)
+    }
     return value
   }
 
@@ -321,6 +348,8 @@ class Runtime {
     const found = rootOf(self).named.get(name)
     if (found) return found.kind === "prop" ? (this.aliasOf(found) ?? found) : found
 
+    // Поля страницы — глобальные имена, как id элементов в браузере: списки их перекрывают.
+    if (Object.hasOwn(this.inputs, name)) return new Field(this.inputs[name]!)
     if (name === "Math") return MATH_MARK
     return new Missing(name)
   }
@@ -438,6 +467,10 @@ class Runtime {
    */
   private member(obj: Value, name: string, args: Value[] | null): Value {
     if (obj === MATH_MARK) return this.math(name, args)
+    if (obj instanceof Field) {
+      if (name === "value") return obj.value
+      throw new PerchanceError("unsupported", `.${name}`)
+    }
 
     if (obj instanceof Consumable) {
       if (name === "selectOne" || name === "consumableList") return this.consume(obj)
@@ -619,9 +652,28 @@ export const generatorTitle = (bundle: Bundle, random: Random = cryptoRandom): s
   }
 }
 
-/** Один бросок по таблице: готовый текст без HTML. */
-export const rollList = (bundle: Bundle, list = "", random: Random = cryptoRandom): string => {
+/** Поля из списка `$inputs` по порядку. Подпись не вышла — подписью будет id поля. */
+export const generatorInputs = (bundle: Bundle, random: Random = cryptoRandom): GeneratorInput[] => {
   const runtime = new Runtime(bundle.sources, random)
+  const inputs = runtime.root(bundle.name).named.get(INPUTS_LIST)
+  if (inputs?.kind !== "list") return []
+
+  return [...inputs.named.values()]
+    .filter((node): node is PropNode => node.kind === "prop" && IDENT_RE.test(node.name))
+    .map((node) => {
+      let label = ""
+      try {
+        label = htmlToText(resolveArticles(runtime.renderNode(node), true)).split("\n")[0]?.trim() ?? ""
+      } catch {
+        // Подпись с ошибкой не повод прятать поле.
+      }
+      return { name: node.name, label: label || node.name }
+    })
+}
+
+/** Один бросок по таблице: готовый текст без HTML. */
+export const rollList = (bundle: Bundle, list = "", random: Random = cryptoRandom, inputs: InputValues = {}): string => {
+  const runtime = new Runtime(bundle.sources, random, inputs)
   const root = runtime.root(bundle.name)
   const target = list ? root.named.get(list) : root
   if (!target) throw new PerchanceError("unknownName", list)

@@ -36,7 +36,7 @@ const en = {
 
   tabs: {
     dice: "Dice",
-    dccDice: "DCC dice",
+    dccDice: "DCC",
     // Коротко, как и в русском: с четвёртой вкладкой «My rolls / Shared rolls»
     // выталкивали «Combat» под стрелку сворачивания.
     mine: "Mine",
@@ -116,7 +116,7 @@ const en = {
     remove: (name: string) => `Remove ${name}`,
     empty: "Paste a link to a perchance.org generator. The panel takes its lists, not its page.",
     help: "What works",
-    hint: "Lists, weights, {a|b}, {1-6}, [list], [x = list.selectOne] and imports work. The generator's own page, plugins and JavaScript functions don't: those generators roll empty or with an error.",
+    hint: "Lists, weights, {a|b}, {1-6}, [list], [x = list.selectOne] and imports work. The generator's own page, plugins and JavaScript functions don't: those generators roll empty or with an error. For fields like on the generator's page, add a $inputs list with lines like luckInput = Luck modifier: the field shows up under the table, and the generator reads it as [luckInput.value]. Re-add the table after changing $inputs.",
   },
 
   perchanceErrors: {
@@ -384,9 +384,11 @@ const ru: Strings = {
 
   tabs: {
     dice: "Кубы",
-    dccDice: "Кубы DCC",
+    // Просто «DCC»: иконка жезла и так говорит, что это кубы, а место в строке
+    // вкладок нужно подписи «Таблицы».
+    dccDice: "DCC",
     // Короче английских: «Мои броски / Общие броски» не влезали в ширину
-    // панели рядом с «Кубы DCC», а звёздочка и цепочка и так поясняют смысл.
+    // панели, а звёздочка и цепочка и так поясняют смысл.
     mine: "Мои",
     shared: "Общие",
     combat: "Бой",
@@ -464,7 +466,7 @@ const ru: Strings = {
     remove: (name) => `Убрать ${name}`,
     empty: "Вставьте ссылку на генератор с perchance.org. Панель берёт из него списки, а не страницу.",
     help: "Что работает",
-    hint: "Работают списки, веса, {a|b}, {1-6}, [список], [x = список.selectOne] и импорты. Не работают страница генератора, плагины и функции на JavaScript: такие генераторы выдают пустоту или ошибку.",
+    hint: "Работают списки, веса, {a|b}, {1-6}, [список], [x = список.selectOne] и импорты. Не работают страница генератора, плагины и функции на JavaScript: такие генераторы выдают пустоту или ошибку. Чтобы были поля, как на странице генератора, добавьте список $inputs со строками вида luckInput = Модификатор удачи: поле появится под таблицей, а генератор прочтёт его как [luckInput.value]. После правки $inputs таблицу нужно добавить заново.",
   },
 
   perchanceErrors: {

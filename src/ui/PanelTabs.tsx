@@ -21,13 +21,11 @@ interface Props {
 export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollapsed }: Props) => {
   const t = useT()
 
-  /** iconOnly — подпись только в подсказке: пятая подпись в ширину панели уже не влезает. */
-  const tab = (id: Panel, icon: preact.JSX.Element, label: string, iconOnly = false) => (
+  const tab = (id: Panel, icon: preact.JSX.Element, label: string) => (
     <button
       className={`tab${panel === id ? " tab--active" : ""}`}
       role="tab"
       aria-selected={panel === id}
-      {...(iconOnly ? { "aria-label": label, title: label } : {})}
       onClick={() => {
         onPanelChange(id)
         // Клик по вкладке при свёрнутой области — явное желание её увидеть.
@@ -35,7 +33,7 @@ export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollap
       }}
     >
       {icon}
-      {!iconOnly && label}
+      {label}
     </button>
   )
 
@@ -46,7 +44,7 @@ export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollap
         {tab("mine", <StarIcon />, t.tabs.mine)}
         {tab("shared", <LinkIcon />, t.tabs.shared)}
         {tab("combat", <SwordsIcon />, t.tabs.combat)}
-        {tab("tables", <ScrollIcon />, t.tabs.tables, true)}
+        {tab("tables", <ScrollIcon />, t.tabs.tables)}
       </div>
 
       <button

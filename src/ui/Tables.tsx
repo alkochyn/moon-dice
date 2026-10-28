@@ -4,25 +4,36 @@ import { newId } from "../board/log"
 import { readScoped, writeScoped } from "../board/scope"
 import { describePerchanceError, useT } from "../i18n"
 import {
+  generatorInputs,
   generatorTitle,
   listChoices,
   loadBundle,
   parseGeneratorName,
   PerchanceError,
   rollTable,
+  type GeneratorInput,
+  type InputValues,
 } from "../perchance"
 import { HelpIcon, ScrollIcon } from "./icons"
 
 /** Набор таблиц принадлежит доске, как и монстры мастера: у другой партии свои. */
 const TABLES_KEY = "dice.tables.v1"
 
-/** Таблица в списке: генератор, какой список в нём кидать и что было доступно при загрузке. */
+/** В поле генератора вводят модификатор или пару слов, а не простыню: она поехала бы в журнал. */
+const MAX_INPUT_LENGTH = 40
+
+/**
+ * Таблица в списке: генератор, какой список в нём кидать и что было доступно
+ * при загрузке. Поля и введённое в них — у таблиц, добавленных до полей, пусто.
+ */
 interface TableItem {
   id: string
   generator: string
   title: string
   list: string
   lists: string[]
+  inputs: GeneratorInput[]
+  values: InputValues
 }
 
 /** Что уходит в журнал: из какой таблицы бросок и как его перебросить. */
@@ -30,13 +41,27 @@ export interface TableRoll {
   generator: string
   list: string
   title: string
+  inputs: InputValues
 }
 
 interface Props {
   onRolled: (table: TableRoll, text: string) => void
 }
 
-const isItem = (value: unknown): value is TableItem => {
+/** Введённое в поля — из хранилища или чужой записи журнала: берём только строки. */
+export const readInputValues = (value: unknown): InputValues =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? Object.fromEntries(
+        Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+      )
+    : {}
+
+const isInput = (value: unknown): value is GeneratorInput => {
+  const input = value as GeneratorInput | null
+  return typeof input?.name === "string" && typeof input.label === "string"
+}
+
+const isItem = (value: unknown): value is Omit<TableItem, "inputs" | "values"> => {
   const item = value as TableItem | null
   return (
     typeof item?.id === "string" &&
@@ -49,8 +74,20 @@ const isItem = (value: unknown): value is TableItem => {
 
 const readTables = (): TableItem[] => {
   const parsed = readScoped<unknown>(TABLES_KEY, [])
-  return Array.isArray(parsed) ? parsed.filter(isItem) : []
+  if (!Array.isArray(parsed)) return []
+  return parsed.filter(isItem).map((item) => {
+    const stored = item as Partial<TableItem>
+    return {
+      ...item,
+      inputs: Array.isArray(stored.inputs) ? stored.inputs.filter(isInput) : [],
+      values: readInputValues(stored.values),
+    }
+  })
 }
+
+/** В бросок идут все объявленные поля, даже пустые: на странице perchance они тоже всегда есть. */
+const valuesFor = (item: TableItem): InputValues =>
+  Object.fromEntries(item.inputs.map((input) => [input.name, item.values[input.name] ?? ""]))
 
 /**
  * Вкладка таблиц: игрок вставляет ссылку на генератор perchance, панель
@@ -97,6 +134,8 @@ export const Tables = ({ onRolled }: Props) => {
         title: generatorTitle(bundle) || name,
         list: lists[0] ?? "",
         lists,
+        inputs: generatorInputs(bundle),
+        values: {},
       }
       save([...itemsRef.current, item])
       setDraft("")
@@ -112,9 +151,10 @@ export const Tables = ({ onRolled }: Props) => {
     if (busy) return
     setBusy(item.id)
     try {
-      const text = await rollTable(item.generator, item.list)
+      const inputs = valuesFor(item)
+      const text = await rollTable(item.generator, item.list, inputs)
       setError(null)
-      onRolled({ generator: item.generator, list: item.list, title: item.title }, text)
+      onRolled({ generator: item.generator, list: item.list, title: item.title, inputs }, text)
     } catch (failure) {
       setError(t.errors.presetPrefix(item.title, describe(failure)))
     } finally {
@@ -124,50 +164,78 @@ export const Tables = ({ onRolled }: Props) => {
 
   const listLabel = (list: string): string => list || t.tables.main
 
+  const update = (id: string, change: (item: TableItem) => TableItem): void =>
+    save(itemsRef.current.map((other) => (other.id === id ? change(other) : other)))
+
   return (
     <div className="combat tables">
       <div className="combat__list">
         {items.length === 0 && <p className="combat__hint">{t.tables.empty}</p>}
 
         {items.map((item) => (
-          <div key={item.id} className="combat__row tables__row">
-            <button
-              className="tables__roll"
-              disabled={busy !== null}
-              onClick={() => void roll(item)}
-              aria-label={t.tables.roll(item.title)}
-              title={item.generator}
-            >
-              <ScrollIcon />
-              <span className="tables__title">{item.title}</span>
-            </button>
-
-            {item.lists.length > 1 && (
-              <select
-                className="tables__list"
-                value={item.list}
-                aria-label={t.tables.listFor(item.title)}
-                onChange={(event) => {
-                  const list = (event.target as HTMLSelectElement).value
-                  save(itemsRef.current.map((other) => (other.id === item.id ? { ...other, list } : other)))
-                }}
+          <div key={item.id} className="tables__item">
+            <div className="combat__row tables__row">
+              <button
+                className="tables__roll"
+                disabled={busy !== null}
+                onClick={() => void roll(item)}
+                aria-label={t.tables.roll(item.title)}
+                title={item.generator}
               >
-                {item.lists.map((list) => (
-                  <option key={list} value={list}>
-                    {listLabel(list)}
-                  </option>
-                ))}
-              </select>
-            )}
+                <ScrollIcon />
+                <span className="tables__title">{item.title}</span>
+              </button>
 
-            <button
-              className="btn btn--ghost btn--icon"
-              onClick={() => save(itemsRef.current.filter((other) => other.id !== item.id))}
-              aria-label={t.tables.remove(item.title)}
-              title={t.tables.remove(item.title)}
-            >
-              ×
-            </button>
+              {item.lists.length > 1 && (
+                <select
+                  className="tables__list"
+                  value={item.list}
+                  aria-label={t.tables.listFor(item.title)}
+                  onChange={(event) => {
+                    const list = (event.target as HTMLSelectElement).value
+                    update(item.id, (other) => ({ ...other, list }))
+                  }}
+                >
+                  {item.lists.map((list) => (
+                    <option key={list} value={list}>
+                      {listLabel(list)}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <button
+                className="btn btn--ghost btn--icon"
+                onClick={() => save(itemsRef.current.filter((other) => other.id !== item.id))}
+                aria-label={t.tables.remove(item.title)}
+                title={t.tables.remove(item.title)}
+              >
+                ×
+              </button>
+            </div>
+
+            {item.inputs.length > 0 && (
+              <div className="tables__inputs">
+                {item.inputs.map((input) => (
+                  <label key={input.name} className="tables__input">
+                    <span className="tables__label">{input.label}</span>
+                    <input
+                      className="input input--compact"
+                      type="text"
+                      autocomplete="off"
+                      spellcheck={false}
+                      maxLength={MAX_INPUT_LENGTH}
+                      value={item.values[input.name] ?? ""}
+                      onInput={(event) => {
+                        const value = (event.target as HTMLInputElement).value
+                        update(item.id, (other) => ({ ...other, values: { ...other.values, [input.name]: value } }))
+                      }}
+                      onKeyDown={(event) => event.key === "Enter" && void roll(item)}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

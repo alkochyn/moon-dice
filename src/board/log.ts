@@ -30,8 +30,11 @@ export interface RollEntry {
    * по генератору perchance, текст результата лежит в detail.
    */
   kind?: "initiative" | "table"
-  /** Чем перебросить таблицу: генератор и список в нём (без списка — главный вывод). */
-  table?: { generator: string; list?: string }
+  /**
+   * Чем перебросить таблицу: генератор, список в нём (без списка — главный
+   * вывод) и что было введено в поля генератора.
+   */
+  table?: { generator: string; list?: string; inputs?: Record<string, string> }
   results: RollResultEntry[]
 }
 

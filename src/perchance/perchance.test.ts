@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
 
-import { fetchBundle, generatorTitle, listChoices, parseGeneratorName, PerchanceError, rollList } from "."
+import {
+  fetchBundle,
+  generatorInputs,
+  generatorTitle,
+  listChoices,
+  parseGeneratorName,
+  PerchanceError,
+  rollList,
+} from "."
 import { article, htmlToText, pluralForm, singularForm, titleCase } from "./text"
 
 /** Предсказуемый генератор: тесты не должны мигать. */
@@ -187,6 +195,44 @@ describe("что предлагать кинуть", () => {
 
   it("без output — только списки", () => {
     expect(listChoices({ name: "main", sources: { main: "a\n  x\nb\n  y" } })).toEqual(["a", "b"])
+  })
+})
+
+describe("поля генератора", () => {
+  const code = [
+    "$inputs",
+    "  luckInput = <b>Luck</b> modifier",
+    "  nameInput = Name",
+    "output",
+    "  [luck = (luckInput && +luckInput.value) || 0, \"\"]luck [luck], [nameInput.value]",
+  ].join("\n")
+  const bundle = { name: "main", sources: { main: code } }
+
+  it("$inputs — поля по порядку, подпись без HTML, в выбор списков не попадает", () => {
+    expect(generatorInputs(bundle)).toEqual([
+      { name: "luckInput", label: "Luck modifier" },
+      { name: "nameInput", label: "Name" },
+    ])
+    expect(listChoices(bundle)).toEqual([""])
+    expect(generatorInputs({ name: "main", sources: { main: "output\n  a" } })).toEqual([])
+  })
+
+  it("генератор читает введённое как value, как id элемента на странице", () => {
+    expect(rollList(bundle, "", seeded(1), { luckInput: "-2", nameInput: "Bob" })).toBe("luck -2, Bob")
+    expect(rollList(bundle, "", seeded(1), { luckInput: "", nameInput: "" })).toBe("luck 0,")
+  })
+
+  it("без полей — неизвестное имя, а у поля есть только value", () => {
+    expect(failure(() => rollList(bundle, "", seeded(1))).code).toBe("unknownName")
+    expect(failure(() => roll("output\n  [luckInput.length]", "", 1)).code).toBe("unknownName")
+    const field = failure(() => rollList({ name: "main", sources: { main: "output\n  [x.length]" } }, "", seeded(1), { x: "1" }))
+    expect(field.code).toBe("unsupported")
+  })
+
+  it("списки генератора перекрывают поля с тем же именем", () => {
+    expect(rollList({ name: "main", sources: { main: "output\n  [x]\nx\n  list" } }, "", seeded(1), { x: "field" })).toBe(
+      "list",
+    )
   })
 })
 

@@ -555,6 +555,7 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
   const classes = [
     "term-entry",
     mine && "term-entry--mine",
+    table && "term-entry--table",
     natural && `term-entry--${natural}`,
     burnToken && "term-entry--burning",
   ]

@@ -422,8 +422,10 @@ button {
   gap: 10px;
 }
 
-/* Подпись вкладки — одной строкой: перенос ломал строку вкладок пополам. */
+/* Подпись вкладки — одной строкой: перенос ломал строку вкладок пополам.
+   Подпись прижата к иконке: с пятой подписью «Таблицы» каждый пиксель на счету. */
 .panel-tabs .tab {
+  gap: 3px;
   white-space: nowrap;
   letter-spacing: 0;
 }
@@ -1598,6 +1600,66 @@ button {
   font-size: 12px;
 }
 
+/*
+ * Поля генератора — под строкой таблицы, подпись слева. Поле узкое: туда
+ * вводят модификатор, а не текст.
+ */
+.tables__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tables__inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding-left: 8px;
+}
+
+.tables__input {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tables__input .input {
+  flex: none;
+  width: 64px;
+  font-size: 12px;
+}
+
+/* --- Таблицы в журнале --- */
+/*
+ * Результат таблицы — текст, а не число, и читается иначе, чем бросок кубов.
+ * Фиолетовая кромка отличает его в потоке издалека и не спорит с синей
+ * инициативой; сам текст отделён от строки с названием.
+ */
+.entry--table {
+  border-color: #dccdfb;
+  border-left: 3px solid var(--chip-violet);
+  background: #f8f5ff;
+  padding-left: 7px;
+}
+
+.entry--table.entry--mine {
+  border-color: #c7b0f6;
+  border-left-color: var(--chip-violet);
+  background: #f3eeff;
+}
+
+.entry--table .entry__formula {
+  color: var(--chip-violet);
+  font-weight: 600;
+}
+
+.entry--table .entry__formula:hover {
+  color: #5b21b6;
+}
+
 /* Текст результата таблицы в журнале: абзацы NPC сохраняют переносы. */
 .entry--table .entry__roll {
   flex: 0 1 auto;
@@ -1616,6 +1678,8 @@ button {
 
 .entry__text {
   margin: 4px 0 0;
+  padding-top: 4px;
+  border-top: 1px dashed #dccdfb;
   font-size: 13px;
   line-height: 1.4;
   white-space: pre-line;
