@@ -3,7 +3,7 @@ import { useEffect, useRef } from "preact/hooks"
 import type { RollEntry } from "../board/log"
 import { useT } from "../i18n"
 import { Avatar } from "./Avatar"
-import { RepeatIcon, SaveIcon, SwordsIcon } from "./icons"
+import { RepeatIcon, SaveIcon, ScrollIcon, SwordsIcon } from "./icons"
 
 interface Props {
   entries: RollEntry[]
@@ -79,6 +79,65 @@ const InitiativeEntry = ({ entry, locale }: { entry: RollEntry; locale: string }
   )
 }
 
+/**
+ * Бросок по таблице: вместо суммы — текст результата, иногда в несколько
+ * абзацев (NPC целиком). Переброс — по клику на название таблицы, как у
+ * формулы; сохранять в пресеты нечего: это не формула.
+ */
+const TableEntry = ({
+  entry,
+  mine,
+  locale,
+  onRepeat,
+}: {
+  entry: RollEntry
+  mine: boolean
+  locale: string
+  onRepeat: (entry: RollEntry) => void
+}) => {
+  const t = useT()
+  const title = entry.label ?? entry.expression
+  const list = entry.table?.list
+
+  return (
+    <article className={`entry entry--table${mine ? " entry--mine" : ""}`}>
+      <div className="entry__body">
+        <div className="entry__line">
+          <Avatar
+            name={entry.userName}
+            userId={entry.userId}
+            {...(entry.icon ? { icon: entry.icon } : {})}
+            {...(entry.color ? { color: entry.color } : {})}
+          />
+          <span className="entry__user">{entry.userName}</span>
+
+          {/* Накладки с действиями нет: действие одно, и накладка закрывала
+              бы название целиком — а длинное название и есть суть карточки. */}
+          <span className="entry__roll">
+            <button
+              className="entry__formula entry__table"
+              onClick={() => onRepeat(entry)}
+              aria-label={t.log.rerollNamed(title)}
+              title={`${t.log.reroll}: ${entry.expression}`}
+            >
+              <ScrollIcon />
+              {title}
+            </button>
+          </span>
+
+          {list && <span className="entry__label">{list}</span>}
+        </div>
+
+        <p className="entry__text">{entry.results[0]?.detail}</p>
+
+        <span className="entry__time" title={fullTime(entry.ts, locale)}>
+          {time(entry.ts, locale)}
+        </span>
+      </div>
+    </article>
+  )
+}
+
 export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => {
   const t = useT()
   const logRef = useRef<HTMLDivElement>(null)
@@ -106,6 +165,17 @@ export const RollLog = ({ entries, currentUserId, onRepeat, onSave }: Props) => 
       <div ref={logRef} className="log">
         {entries.map((entry) => {
           if (entry.kind === "initiative") return <InitiativeEntry key={entry.id} entry={entry} locale={t.locale} />
+          if (entry.kind === "table") {
+            return (
+              <TableEntry
+                key={entry.id}
+                entry={entry}
+                mine={entry.userId === currentUserId}
+                locale={t.locale}
+                onRepeat={onRepeat}
+              />
+            )
+          }
 
           // `6#3d6` — это шесть отдельных бросков, и каждый показывается своей
           // плиткой: сумма крупно, расклад под ней. Одной строкой с колонкой

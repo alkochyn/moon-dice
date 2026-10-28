@@ -1547,3 +1547,77 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Таблицы perchance --- */
+/* Название таблицы — сама кнопка броска: кликают по тому, что хотят кинуть. */
+.tables__roll {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tables__roll:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tables__roll:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.tables__roll .icon {
+  flex: none;
+}
+
+.tables__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Список в генераторе — узкий: название таблицы важнее. */
+.tables__list {
+  flex: none;
+  max-width: 40%;
+  padding: 3px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+/* Текст результата таблицы в журнале: абзацы NPC сохраняют переносы. */
+.entry--table .entry__roll {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.entry__table {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.entry__table .icon {
+  flex: none;
+}
+
+.entry__text {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

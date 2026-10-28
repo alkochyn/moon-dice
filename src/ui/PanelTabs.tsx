@@ -1,8 +1,8 @@
 import { useT } from "../i18n"
-import { ChevronIcon, LinkIcon, RollIcon, StarIcon, SwordsIcon, WandIcon } from "./icons"
+import { ChevronIcon, LinkIcon, RollIcon, ScrollIcon, StarIcon, SwordsIcon, WandIcon } from "./icons"
 
-/** Что открыто в общей области над полем ввода: кубы, сохранённые броски или бой. */
-export type Panel = "dice" | "mine" | "shared" | "combat"
+/** Что открыто в общей области над полем ввода: кубы, сохранённые броски, бой или таблицы. */
+export type Panel = "dice" | "mine" | "shared" | "combat" | "tables"
 
 interface Props {
   panel: Panel
@@ -21,11 +21,13 @@ interface Props {
 export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollapsed }: Props) => {
   const t = useT()
 
-  const tab = (id: Panel, icon: preact.JSX.Element, label: string) => (
+  /** iconOnly — подпись только в подсказке: пятая подпись в ширину панели уже не влезает. */
+  const tab = (id: Panel, icon: preact.JSX.Element, label: string, iconOnly = false) => (
     <button
       className={`tab${panel === id ? " tab--active" : ""}`}
       role="tab"
       aria-selected={panel === id}
+      {...(iconOnly ? { "aria-label": label, title: label } : {})}
       onClick={() => {
         onPanelChange(id)
         // Клик по вкладке при свёрнутой области — явное желание её увидеть.
@@ -33,7 +35,7 @@ export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollap
       }}
     >
       {icon}
-      {label}
+      {!iconOnly && label}
     </button>
   )
 
@@ -44,6 +46,7 @@ export const PanelTabs = ({ panel, dcc, collapsed, onPanelChange, onToggleCollap
         {tab("mine", <StarIcon />, t.tabs.mine)}
         {tab("shared", <LinkIcon />, t.tabs.shared)}
         {tab("combat", <SwordsIcon />, t.tabs.combat)}
+        {tab("tables", <ScrollIcon />, t.tabs.tables, true)}
       </div>
 
       <button

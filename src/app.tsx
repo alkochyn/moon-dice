@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 
 import "./styles.css"
 import { DiceError, parseFormula, rollFormula } from "./dice"
-import { DEFAULT_LANG, LangContext, STRINGS, describeDiceError, isLang, type Lang } from "./i18n"
+import { DEFAULT_LANG, LangContext, STRINGS, describeDiceError, describePerchanceError, isLang, type Lang } from "./i18n"
 import { DEFAULT_DICE_SET } from "./data/diceSets"
 import { ensureSdk, getCurrentUser, watchLateSdk, type BoardStatus, type BoardUser } from "./board/sdk"
 import {
   mergeEntries,
+  MAX_TABLE_TEXT,
   newId,
   nextEntries,
   publishEntry,
@@ -44,6 +45,8 @@ import { RollLog } from "./ui/RollLog"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { Help } from "./ui/Help"
 import { Combat } from "./ui/Combat"
+import { Tables, type TableRoll } from "./ui/Tables"
+import { PerchanceError, rollTable } from "./perchance"
 import { defaultColor, defaultIconId } from "./utils/avatar"
 import { DEFAULT_SKIN, isSkin, type Skin } from "./skins"
 import { Terminal } from "./skins/terminal/Terminal"
@@ -169,7 +172,13 @@ export const App = () => {
     setDiceSet(readGlobal<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
     setDiceCollapsed(readGlobal<boolean>(DICE_COLLAPSED_KEY, false))
     const savedPanel = readGlobal<unknown>(PANEL_KEY, "dice")
-    if (savedPanel === "dice" || savedPanel === "mine" || savedPanel === "shared" || savedPanel === "combat") {
+    if (
+      savedPanel === "dice" ||
+      savedPanel === "mine" ||
+      savedPanel === "shared" ||
+      savedPanel === "combat" ||
+      savedPanel === "tables"
+    ) {
       setPanel(savedPanel)
     }
     setLook(readGlobal<{ icon?: string; color?: string }>(LOOK_KEY, {}))
@@ -420,6 +429,58 @@ export const App = () => {
     [publish, user, postInitiative],
   )
 
+  /**
+   * Бросок по таблице perchance: текст уже готов, его выдала вкладка таблиц
+   * или переброс из журнала. В журнал — обрезанным: ключ доски не резиновый.
+   */
+  const publishTable = useCallback(
+    (table: TableRoll, text: string) => {
+      const strings = tRef.current
+      const detail = text.length > MAX_TABLE_TEXT ? `${text.slice(0, MAX_TABLE_TEXT - 1)}…` : text
+      const entry: RollEntry = {
+        id: newId(),
+        ts: Date.now(),
+        userId: user?.id ?? anonId.current,
+        userName: characterRef.current || user?.name || strings.player.fallbackName,
+        icon: lookRef.current.icon,
+        color: lookRef.current.color,
+        kind: "table",
+        // Старая панель без поддержки таблиц покажет хотя бы имя генератора
+        // и текст под нулём — лучше, чем пустая карточка.
+        expression: table.generator,
+        label: table.title,
+        table: { generator: table.generator, ...(table.list ? { list: table.list } : {}) },
+        results: [{ total: 0, detail }],
+      }
+
+      publish(entry)
+    },
+    [publish, user],
+  )
+
+  /** Переброс таблицы из журнала: код генератора, скорее всего, уже в кэше. */
+  const rerollTable = useCallback(
+    (entry: RollEntry) => {
+      const table = entry.table
+      if (!table) return
+      const title = entry.label ?? table.generator
+
+      rollTable(table.generator, table.list ?? "").then(
+        (text) => {
+          setError(null)
+          publishTable({ generator: table.generator, list: table.list ?? "", title }, text)
+        },
+        (failure: unknown) => {
+          const strings = tRef.current
+          const message =
+            failure instanceof PerchanceError ? describePerchanceError(strings, failure) : strings.perchanceErrors.network("")
+          setError(strings.errors.presetPrefix(title, message))
+        },
+      )
+    },
+    [publishTable],
+  )
+
   /** Собирает строку формы из сохранённого броска: формула плюс метка. */
   const toSource = (expression: string, label?: string): string => (label ? `${expression} : ${label}` : expression)
 
@@ -563,6 +624,10 @@ export const App = () => {
   const playerName = character || user?.name || t.player.fallbackName
 
   const repeatEntry = (entry: RollEntry): void => {
+    if (entry.kind === "table") {
+      rerollTable(entry)
+      return
+    }
     // Строка с меткой уезжает и в поле ввода: повтор по Enter сохранит название.
     const source = toSource(entry.expression, entry.label)
     setFormula(source)
@@ -590,6 +655,11 @@ export const App = () => {
       onTogglePostToBoard={togglePostInitiative}
       onRoll={rollCombat}
     />
+  )
+
+  const tables = (
+    // Таблицы, как и бой, читают свой набор из копии доски при монтировании.
+    <Tables key={scoped ? "board" : "pending"} onRolled={publishTable} />
   )
 
   const modals = (
@@ -634,6 +704,7 @@ export const App = () => {
           error={error}
           formulaHistory={formulaHistory}
           combat={combat}
+          tables={tables}
           onFormulaChange={setFormula}
           onDismissError={() => setError(null)}
           onRoll={roll}
@@ -680,6 +751,8 @@ export const App = () => {
             <DiceBar diceSet={diceSet} onRoll={roll} />
           ) : panel === "combat" ? (
             combat
+          ) : panel === "tables" ? (
+            tables
           ) : (
             <Presets
               scope={scope}
@@ -696,8 +769,9 @@ export const App = () => {
           ))}
       </section>
 
-      {/* У боя своя кнопка броска, а место под ним нужнее журналу. */}
-      {(diceCollapsed || panel !== "combat") && (
+      {/* У боя и таблиц своя кнопка броска, а место под ними нужнее журналу.
+          Ошибка переброса из журнала при этом не должна пропасть вместе с полем. */}
+      {diceCollapsed || (panel !== "combat" && panel !== "tables") ? (
         <FormulaBar
           formula={formula}
           error={error}
@@ -706,6 +780,8 @@ export const App = () => {
           onRoll={roll}
           onSaveCurrent={() => savePresetNow(formula)}
         />
+      ) : (
+        error && <div className="error">{error}</div>
       )}
 
       {modals}

@@ -1,4 +1,5 @@
 import type { DiceError, DiceErrorCode, DiceErrorParams } from "../dice"
+import type { PerchanceError, PerchanceErrorCode } from "../perchance"
 
 /**
  * Все строки интерфейса на двух языках. Английский — основной: под него
@@ -41,6 +42,7 @@ const en = {
     mine: "Mine",
     shared: "Shared",
     combat: "Combat",
+    tables: "Tables",
     show: "Expand",
     hide: "Collapse",
   },
@@ -103,6 +105,35 @@ const en = {
     post: "Stickies",
     postTitle: "Put the turn order on the board as sticky notes",
   },
+
+  tables: {
+    placeholder: "perchance.org/… or generator name",
+    add: "Add",
+    adding: "Loading…",
+    main: "main output",
+    listFor: (name: string) => `List to roll in ${name}`,
+    roll: (name: string) => `Roll ${name}`,
+    remove: (name: string) => `Remove ${name}`,
+    empty: "Paste a link to a perchance.org generator. The panel takes its lists, not its page.",
+    help: "What works",
+    hint: "Lists, weights, {a|b}, {1-6}, [list], [x = list.selectOne] and imports work. The generator's own page, plugins and JavaScript functions don't: those generators roll empty or with an error.",
+  },
+
+  perchanceErrors: {
+    unknownName: (name: string) => `Unknown list “${name}”`,
+    unsupported: (what: string) => `Not supported here: ${what}`,
+    notCallable: (name: string) => `“${name}” is a plugin or function, those don't work here`,
+    noOutput: () => "The generator has no output list: pick a list",
+    importMissing: (name: string) => `Imported generator “${name}” wasn't found`,
+    tooDeep: () => "The generator loops on itself",
+    empty: () => "The roll came out empty: try another list",
+    network: () => "perchance.org didn't respond",
+    notFound: (name: string) => `No generator “${name}” on perchance.org`,
+    badLink: () => "That's not a perchance.org link or generator name",
+  } satisfies Record<PerchanceErrorCode, (detail: string) => string> as Record<
+    PerchanceErrorCode,
+    (detail: string) => string
+  >,
 
   errors: {
     parseFailed: "Couldn't read the formula",
@@ -202,6 +233,7 @@ const en = {
       ["✎ and × on a roll", "edit or delete; they appear on hover"],
       ["drag and drop", "reorder saved rolls"],
       ["Combat", "the GM's tab: one button rolls initiative for everyone on the board and the monsters"],
+      ["Tables", "rolls on perchance.org generators; the result goes to the shared history"],
       ["settings", "character name, icon, colour, initiative, dice set, language and diagnostics"],
     ] as Array<[string, string]>,
     terminal: "Terminal",
@@ -211,7 +243,7 @@ const en = {
       ["F1–F4", "your first four saved rolls, wherever the focus is"],
       ["SAVED", "all your rolls and the party's: rename, reorder with ^ and v, delete"],
       ["/bind F2 1d8+3 : sword", "put a roll on a key"],
-      ["/log /saved /init", "switch the screen"],
+      ["/log /saved /init /tables", "switch the screen"],
       ["/help /settings", "this help and the settings"],
       ["[again] [save]", "on a roll's frame, shown on hover"],
       ["[amber]", "screen colour: amber, green or ice"],
@@ -293,7 +325,7 @@ const en = {
     empty: "No rolls yet. Type a formula below or press a die.",
     edit: "edit",
     editTitle: "All saved rolls and F-key bindings",
-    tabs: { log: "LOG", saved: "SAVED", init: "INIT" },
+    tabs: { log: "LOG", saved: "SAVED", init: "INIT", tables: "TABLES" },
     again: "again",
     save: "save",
     relight: "Natural 20, light it again",
@@ -358,6 +390,7 @@ const ru: Strings = {
     mine: "Мои",
     shared: "Общие",
     combat: "Бой",
+    tables: "Таблицы",
     show: "Развернуть",
     hide: "Свернуть",
   },
@@ -419,6 +452,32 @@ const ru: Strings = {
     roll: "Бросить инициативу",
     post: "Стикеры",
     postTitle: "Положить порядок ходов на доску стикерами",
+  },
+
+  tables: {
+    placeholder: "perchance.org/… или имя генератора",
+    add: "Добавить",
+    adding: "Загрузка…",
+    main: "главный вывод",
+    listFor: (name) => `Какой список кидать в ${name}`,
+    roll: (name) => `Бросить ${name}`,
+    remove: (name) => `Убрать ${name}`,
+    empty: "Вставьте ссылку на генератор с perchance.org. Панель берёт из него списки, а не страницу.",
+    help: "Что работает",
+    hint: "Работают списки, веса, {a|b}, {1-6}, [список], [x = список.selectOne] и импорты. Не работают страница генератора, плагины и функции на JavaScript: такие генераторы выдают пустоту или ошибку.",
+  },
+
+  perchanceErrors: {
+    unknownName: (name) => `Нет списка «${name}»`,
+    unsupported: (what) => `Здесь не поддерживается: ${what}`,
+    notCallable: (name) => `«${name}» — плагин или функция, они здесь не работают`,
+    noOutput: () => "У генератора нет списка output — выберите список",
+    importMissing: (name) => `Не найден импортированный генератор «${name}»`,
+    tooDeep: () => "Генератор зацикливается сам на себя",
+    empty: () => "Бросок вышел пустым — попробуйте другой список",
+    network: () => "perchance.org не ответил",
+    notFound: (name) => `На perchance.org нет генератора «${name}»`,
+    badLink: () => "Это не ссылка на perchance.org и не имя генератора",
   },
 
   errors: {
@@ -520,6 +579,7 @@ const ru: Strings = {
       ["✎ и × на броске", "изменить или удалить; появляются при наведении"],
       ["перетаскивание", "менять порядок сохранённых бросков"],
       ["Бой", "вкладка мастера: одна кнопка кидает инициативу за всех на доске и за монстров"],
+      ["Таблицы", "броски по генераторам с perchance.org; результат уходит в общий журнал"],
       ["настройки", "имя персонажа, значок, цвет, инициатива, набор кубов, язык и диагностика"],
     ],
     terminal: "Терминал",
@@ -529,7 +589,7 @@ const ru: Strings = {
       ["F1–F4", "первые четыре своих броска, где бы ни стоял фокус"],
       ["СВОИ", "все свои и общие броски: название, порядок через ^ и v, удаление"],
       ["/bind F2 1d8+3 : меч", "повесить бросок на клавишу"],
-      ["/log /saved /init", "переключить экран"],
+      ["/log /saved /init /tables", "переключить экран"],
       ["/help /settings", "эта справка и настройки"],
       ["[ещё] [сохранить]", "на рамке броска, видны при наведении"],
       ["[amber]", "цвет экрана: янтарный, зелёный или ледяной"],
@@ -610,7 +670,7 @@ const ru: Strings = {
     empty: "Бросков ещё нет. Наберите формулу внизу или нажмите на куб.",
     edit: "правка",
     editTitle: "Все сохранённые броски и F-клавиши",
-    tabs: { log: "ЖУРНАЛ", saved: "СВОИ", init: "БОЙ" },
+    tabs: { log: "ЖУРНАЛ", saved: "СВОИ", init: "БОЙ", tables: "ТАБЛИЦЫ" },
     again: "ещё",
     save: "сохранить",
     relight: "Натуральная 20, зажечь ещё раз",
@@ -658,3 +718,7 @@ export const isLang = (value: unknown): value is Lang => value === "en" || value
 /** Текст ошибки формулы на языке интерфейса. */
 export const describeDiceError = (strings: Strings, error: DiceError): string =>
   strings.diceErrors[error.code](error.params)
+
+/** Текст ошибки таблицы perchance на языке интерфейса. */
+export const describePerchanceError = (strings: Strings, error: PerchanceError): string =>
+  strings.perchanceErrors[error.code](error.detail)

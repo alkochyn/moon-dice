@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { MAX_ENTRIES, mergeEntries, newId, nextEntries, type RollEntry } from "./log"
+import { fitToBoard, MAX_ENTRIES, mergeEntries, newId, nextEntries, type RollEntry } from "./log"
 
 const entry = (id: string, ts: number): RollEntry => ({
   id,
@@ -71,5 +71,26 @@ describe("обновление журнала опросом", () => {
   it("поднимает журнал с нуля при первом ответе доски", () => {
     const next = nextEntries([], [entry("a", 1)])
     expect(next).toHaveLength(1)
+  })
+})
+
+describe("журнал в ключе доски", () => {
+  it("оставляет журнал как есть, если он влезает", () => {
+    const entries = [entry("b", 2), entry("a", 1)]
+    expect(fitToBoard(entries)).toBe(entries)
+  })
+
+  it("отбрасывает старые записи, когда журнал не влезает в ключ", () => {
+    const long = (id: string, ts: number): RollEntry => ({
+      ...entry(id, ts),
+      kind: "table",
+      results: [{ total: 0, detail: "Гоблин с ржавым ножом. ".repeat(40) }],
+    })
+    const entries = Array.from({ length: 100 }, (_, index) => long(`t${100 - index}`, 100 - index))
+    const fitted = fitToBoard(entries)
+
+    expect(fitted.length).toBeLessThan(entries.length)
+    expect(fitted[0]?.id).toBe("t100")
+    expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(56 * 1024)
   })
 })

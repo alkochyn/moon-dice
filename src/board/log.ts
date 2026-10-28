@@ -4,6 +4,14 @@ import type { Strings } from "../i18n/strings"
 
 export const LOG_KEY = "log"
 export const MAX_ENTRIES = 200
+/**
+ * Miro хранит в одном ключе не больше 64 КБ, а журнал — это один ключ. Записи
+ * таблиц длинные, и без этого лимита пара десятков NPC переполнила бы ключ —
+ * публикация перестала бы проходить у всей партии. Берём с запасом.
+ */
+export const MAX_BOARD_BYTES = 56 * 1024
+/** Текст результата таблицы в журнале: NPC целиком влезает, простыня — нет. */
+export const MAX_TABLE_TEXT = 1200
 const LOCAL_KEY = "dice.log.v1"
 
 export interface RollEntry {
@@ -17,8 +25,13 @@ export interface RollEntry {
   color?: string
   expression: string
   label?: string
-  /** Особый бросок. Сейчас это только инициатива: мастер кидает за всех разом. */
-  kind?: "initiative"
+  /**
+   * Особый бросок. Инициатива — мастер кидает за всех разом; таблица — бросок
+   * по генератору perchance, текст результата лежит в detail.
+   */
+  kind?: "initiative" | "table"
+  /** Чем перебросить таблицу: генератор и список в нём (без списка — главный вывод). */
+  table?: { generator: string; list?: string }
   results: RollResultEntry[]
 }
 
@@ -52,6 +65,25 @@ export const mergeEntries = (...lists: RollEntry[][]): RollEntry[] => {
   }
 
   return [...byId.values()].sort((a, b) => b.ts - a.ts).slice(0, MAX_ENTRIES)
+}
+
+/**
+ * Свежие записи, которые влезают в ключ доски. Считаем байты UTF-8: кириллица
+ * весит вдвое больше латиницы.
+ */
+export const fitToBoard = (entries: RollEntry[], limit = MAX_BOARD_BYTES): RollEntry[] => {
+  const encoder = new TextEncoder()
+  // Скобки массива и запятые между записями.
+  let size = 2
+  let count = 0
+
+  for (const entry of entries) {
+    size += encoder.encode(JSON.stringify(entry)).length + (count > 0 ? 1 : 0)
+    if (size > limit) break
+    count++
+  }
+
+  return count === entries.length ? entries : entries.slice(0, count)
 }
 
 /**
@@ -97,7 +129,7 @@ export const describeBoardLog = async (d: Strings["diag"], locale: string): Prom
 
 export const publishEntry = async (entry: RollEntry): Promise<boolean> => {
   const next = await updateKey<RollEntry[]>(LOG_KEY, (current) =>
-    mergeEntries(Array.isArray(current) ? current : [], [entry]),
+    fitToBoard(mergeEntries(Array.isArray(current) ? current : [], [entry])),
   )
 
   return next !== null

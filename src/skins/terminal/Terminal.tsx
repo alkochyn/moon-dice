@@ -39,7 +39,7 @@ const MAX_DRAWN_DICE = 12
 /** Зазор между кубами, мечом и суммой в строке броска — как в CSS. */
 const ROW_GAP = 10
 
-type Tab = "log" | "saved" | "init"
+type Tab = "log" | "saved" | "init" | "tables"
 
 interface Props {
   status: BoardStatus
@@ -54,6 +54,8 @@ interface Props {
   formulaHistory: string[]
   /** Вкладка боя — тот же компонент, что в обычном облике. */
   combat: ComponentChildren
+  /** И вкладка таблиц perchance — тоже. */
+  tables: ComponentChildren
   /** Модальные окна: рендерятся внутри скина, чтобы взять его цвета. */
   children?: ComponentChildren
   onFormulaChange: (value: string) => void
@@ -152,7 +154,7 @@ interface EntryView {
 }
 
 const viewOf = (entry: RollEntry): EntryView => {
-  const single = entry.kind !== "initiative" && entry.results.length === 1 ? entry.results[0] : undefined
+  const single = entry.kind === undefined && entry.results.length === 1 ? entry.results[0] : undefined
   const art = single ? rollArtOf(entry.expression, single.detail) : null
   return { entry, art, natural: naturalOf(art?.dice ?? null) }
 }
@@ -169,6 +171,7 @@ export const Terminal = ({
   error,
   formulaHistory,
   combat,
+  tables,
   children,
   onFormulaChange,
   onDismissError,
@@ -293,7 +296,7 @@ export const Terminal = ({
     const name = command.toLowerCase()
     setCommandError(null)
 
-    if (name === "log" || name === "saved" || name === "init") {
+    if (name === "log" || name === "saved" || name === "init" || name === "tables") {
       setTab(name)
       onFormulaChange("")
     } else if (name === "help") {
@@ -426,6 +429,7 @@ export const Terminal = ({
         )}
 
         {tab === "init" && <div className="term__page term__page--combat">{combat}</div>}
+        {tab === "tables" && <div className="term__page term__page--combat">{tables}</div>}
       </div>
 
       {shareError && <div className="term__warning">! {shareError}</div>}
@@ -484,7 +488,7 @@ export const Terminal = ({
       </div>
 
       <div className="term__bar">
-        {(["log", "saved", "init"] as const).map((id) => (
+        {(["log", "saved", "init", "tables"] as const).map((id) => (
           <button
             key={id}
             className={`term__tab${tab === id ? " term__tab--active" : ""}`}
@@ -519,7 +523,8 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
   const t = useT()
   const { entry, art, natural } = view
   const initiative = entry.kind === "initiative"
-  const single = !initiative && entry.results.length === 1 ? entry.results[0] : undefined
+  const table = entry.kind === "table"
+  const single = !initiative && !table && entry.results.length === 1 ? entry.results[0] : undefined
   // Рисуем, только если картинка честная: сложение и вычитание, есть кубы.
   const drawable = art && art.linear && art.dice.length > 0 && art.dice.length <= MAX_DRAWN_DICE ? art : null
 
@@ -544,8 +549,8 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
   }, [width, drawable])
   const drawn = drawable && fits ? drawable : null
   const naturalIndex = natural && drawn ? drawn.dice.findIndex((die) => die.sides === 20 && die.kept) : -1
-  const what = initiative ? t.combat.title : entry.expression
-  const label = initiative ? undefined : entry.label
+  const what = initiative ? t.combat.title : table ? (entry.label ?? entry.expression) : entry.expression
+  const label = initiative ? undefined : table ? entry.table?.list : entry.label
 
   const classes = [
     "term-entry",
@@ -584,7 +589,9 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
         </ol>
       )}
 
-      {!initiative && entry.results.length > 1 && (
+      {table && <p className="term-entry__text">{entry.results[0]?.detail}</p>}
+
+      {!initiative && !table && entry.results.length > 1 && (
         <ol className="term-entry__repeats">
           {entry.results.map((result, index) => (
             <li key={index}>
@@ -676,9 +683,11 @@ const TermEntry = ({ view, mine, width, burnToken, rattleToken, onBurnDone, onIg
             <button className="term-btn" onClick={onRepeat} aria-label={t.log.rerollNamed(entry.expression)}>
               [{t.term.again}]
             </button>
-            <button className="term-btn" onClick={onSave} aria-label={t.log.saveNamed(entry.expression)}>
-              [{t.term.save}]
-            </button>
+            {!table && (
+              <button className="term-btn" onClick={onSave} aria-label={t.log.saveNamed(entry.expression)}>
+                [{t.term.save}]
+              </button>
+            )}
           </>
         )}
       </div>

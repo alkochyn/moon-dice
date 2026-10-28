@@ -805,3 +805,10 @@
   background: var(--t-fg);
   color: var(--t-bg);
 }
+
+/* Результат таблицы perchance: текст как есть, с переносами абзацев. */
+.term-entry__text {
+  margin: 4px 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
