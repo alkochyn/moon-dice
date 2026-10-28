@@ -1121,14 +1121,6 @@ button {
   word-break: break-all;
 }
 
-.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
 /* --- Настройки игрока --- */
 .modal {
   position: fixed;
@@ -1319,7 +1311,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 60vh;
+  max-height: 45vh;
   min-height: 0;
   font-size: 13px;
 }
@@ -1432,12 +1424,39 @@ button {
   color: var(--muted);
 }
 
+.combat__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .combat__roll {
+  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   font-weight: 600;
+}
+
+.combat__post {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.combat__post input {
+  margin: 0;
+}
+
+/* Без доски стикеры класть некуда: переключатель заблокирован и должен это показывать. */
+.combat__post:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* --- Инициатива в журнале --- */
@@ -1527,3 +1546,4 @@ button {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+

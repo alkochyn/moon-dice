@@ -78,8 +78,6 @@ const en = {
     saveNamed: (formula: string) => `Save ${formula}`,
   },
 
-  postToBoard: "Also post rolls to the board as sticky notes",
-
   combat: {
     title: "Initiative",
     rolledBy: (name: string) => `rolled by ${name}`,
@@ -102,6 +100,8 @@ const en = {
     removeMonster: (name: string) => `Remove ${name}`,
     nobody: "Tick at least one player or monster",
     roll: "Roll initiative",
+    post: "Stickies",
+    postTitle: "Put the turn order on the board as sticky notes",
   },
 
   errors: {
@@ -294,8 +294,6 @@ const en = {
     edit: "edit",
     editTitle: "All saved rolls and F-key bindings",
     tabs: { log: "LOG", saved: "SAVED", init: "INIT" },
-    post: "stickies",
-    postTitle: "Also post rolls to the board as sticky notes",
     again: "again",
     save: "save",
     relight: "Natural 20, light it again",
@@ -397,8 +395,6 @@ const ru: Strings = {
     saveNamed: (formula) => `Сохранить ${formula}`,
   },
 
-  postToBoard: "дублировать броски стикером на доску",
-
   combat: {
     title: "Инициатива",
     rolledBy: (name) => `кинул ${name}`,
@@ -421,6 +417,8 @@ const ru: Strings = {
     removeMonster: (name) => `Убрать ${name}`,
     nobody: "Отметьте хотя бы одного игрока или монстра",
     roll: "Бросить инициативу",
+    post: "Стикеры",
+    postTitle: "Положить порядок ходов на доску стикерами",
   },
 
   errors: {
@@ -613,8 +611,6 @@ const ru: Strings = {
     edit: "правка",
     editTitle: "Все сохранённые броски и F-клавиши",
     tabs: { log: "ЖУРНАЛ", saved: "СВОИ", init: "БОЙ" },
-    post: "стикеры",
-    postTitle: "Дублировать броски на доску стикерами",
     again: "ещё",
     save: "сохранить",
     relight: "Натуральная 20, зажечь ещё раз",

@@ -52,7 +52,6 @@ interface Props {
   formula: string
   error: string | null
   formulaHistory: string[]
-  postToBoard: boolean
   /** Вкладка боя — тот же компонент, что в обычном облике. */
   combat: ComponentChildren
   /** Модальные окна: рендерятся внутри скина, чтобы взять его цвета. */
@@ -65,7 +64,6 @@ interface Props {
   onSaveShared: (items: Preset[]) => void
   onRepeat: (entry: RollEntry) => void
   onSaveEntry: (entry: RollEntry) => void
-  onTogglePostToBoard: (next: boolean) => void
   onOpenHelp: () => void
   onOpenSettings: () => void
 }
@@ -170,7 +168,6 @@ export const Terminal = ({
   formula,
   error,
   formulaHistory,
-  postToBoard,
   combat,
   children,
   onFormulaChange,
@@ -180,7 +177,6 @@ export const Terminal = ({
   onSaveShared,
   onRepeat,
   onSaveEntry,
-  onTogglePostToBoard,
   onOpenHelp,
   onOpenSettings,
 }: Props) => {
@@ -498,15 +494,6 @@ export const Terminal = ({
             {t.term.tabs[id]}
           </button>
         ))}
-        <label className="term__post" title={t.term.postTitle}>
-          <input
-            type="checkbox"
-            checked={postToBoard}
-            disabled={status !== "connected"}
-            onChange={(event) => onTogglePostToBoard((event.target as HTMLInputElement).checked)}
-          />
-          {t.term.post}
-        </label>
       </div>
 
       {children}

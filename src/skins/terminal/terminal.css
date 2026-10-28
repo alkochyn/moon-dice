@@ -161,27 +161,6 @@
   color: var(--t-fg);
 }
 
-.term__post {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  padding: 0 10px;
-  cursor: pointer;
-}
-
-/* Без доски стикеры класть некуда: переключатель заблокирован и должен это
-   показывать, а не прикидываться рабочим. */
-.term__post:has(input:disabled) {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.term__post input {
-  margin: 0;
-  accent-color: var(--t-bg);
-}
-
 /* --- Экран: журнал и страницы --- */
 .term__screen {
   position: relative;

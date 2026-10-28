@@ -50,7 +50,8 @@ import { Terminal } from "./skins/terminal/Terminal"
 
 const FORMULA_HISTORY_KEY = "dice.formulas.v1"
 const LOCAL_USER_KEY = "dice.localUserId.v1"
-const POST_TO_BOARD_KEY = "dice.postToBoard.v1"
+/** Класть ли порядок ходов стикерами на доску. Обычные броски на доску не ходят. */
+const POST_INITIATIVE_KEY = "dice.combat.postToBoard.v1"
 const DICE_SET_KEY = "dice.set.v1"
 const DICE_COLLAPSED_KEY = "dice.collapsed.v1"
 const PANEL_KEY = "dice.panel.v1"
@@ -118,7 +119,7 @@ export const App = () => {
   const [presetDraft, setPresetDraft] = useState<PresetDraft | null>(null)
   const [diceSet, setDiceSet] = useState<string>(DEFAULT_DICE_SET)
   const [diceCollapsed, setDiceCollapsed] = useState(false)
-  const [postToBoard, setPostToBoard] = useState(false)
+  const [postInitiative, setPostInitiative] = useState(true)
   const [character, setCharacter] = useState("")
   const [look, setLook] = useState<{ icon?: string; color?: string }>({})
   const [initiative, setInitiative] = useState("")
@@ -139,7 +140,6 @@ export const App = () => {
 
   const statusRef = useRef<BoardStatus>("loading")
   const personalRef = useRef<PresetBox>(personal)
-  const postToBoardRef = useRef(false)
   const anonId = useRef<string>("")
   const characterRef = useRef("")
   const lookRef = useRef<{ icon: string; color: string }>({ icon: "", color: "" })
@@ -153,7 +153,6 @@ export const App = () => {
 
   statusRef.current = status
   personalRef.current = personal
-  postToBoardRef.current = postToBoard
   characterRef.current = character
   lookRef.current = { icon: playerIcon, color: playerColor }
   tRef.current = t
@@ -166,7 +165,7 @@ export const App = () => {
   // обязана быть рабочей ещё до того, как выяснится, доехал ли SDK.
   useEffect(() => {
     anonId.current = localUserId()
-    setPostToBoard(readGlobal<boolean>(POST_TO_BOARD_KEY, false))
+    setPostInitiative(readGlobal<boolean>(POST_INITIATIVE_KEY, true))
     setDiceSet(readGlobal<string>(DICE_SET_KEY, DEFAULT_DICE_SET))
     setDiceCollapsed(readGlobal<boolean>(DICE_COLLAPSED_KEY, false))
     const savedPanel = readGlobal<unknown>(PANEL_KEY, "dice")
@@ -316,10 +315,10 @@ export const App = () => {
   }, [])
 
   /**
-   * Запись в журнал: у себя сразу, на доску следом. stickers уходят на доску,
-   * если игрок включил дублирование бросков.
+   * Запись в журнал: у себя сразу, на доску следом. Стикеры кладёт только
+   * инициатива — обычные броски живут в журнале и доску не засоряют.
    */
-  const publish = useCallback((entry: RollEntry, stickers: Sticker[]) => {
+  const publish = useCallback((entry: RollEntry, stickers: Sticker[] = []) => {
     // Своя запись показывается сразу, не дожидаясь ответа доски.
     setEntries((prev) => {
       const merged = mergeEntries(prev, [entry])
@@ -334,7 +333,7 @@ export const App = () => {
     void publishEntry(entry).then((published) => {
       setShareError(published ? null : tRef.current.errors.publishFailed)
     })
-    if (postToBoardRef.current) void postRollToBoard(stickers)
+    if (stickers.length > 0) void postRollToBoard(stickers)
   }, [])
 
   /**
@@ -375,14 +374,7 @@ export const App = () => {
       }
 
       rememberFormula(source)
-      publish(entry, [
-        {
-          lines: [
-            `${entry.userName}${entry.label ? ` · ${entry.label}` : ""}`,
-            ...entry.results.map((item) => `${entry.expression} = ${item.total}`),
-          ],
-        },
-      ])
+      publish(entry)
     },
     [publish, rememberFormula, user],
   )
@@ -416,14 +408,16 @@ export const App = () => {
       // впереди: по нему глаз и ищет, чей ход.
       publish(
         entry,
-        order.map((item, index) => ({
-          lines: [`${item.total} ${item.name}`],
-          color: STICKY_PALETTE[index % STICKY_PALETTE.length],
-          shape: "rectangle",
-        })),
+        postInitiative
+          ? order.map((item, index) => ({
+              lines: [`${item.total} ${item.name}`],
+              color: STICKY_PALETTE[index % STICKY_PALETTE.length],
+              shape: "rectangle",
+            }))
+          : [],
       )
     },
-    [publish, user],
+    [publish, user, postInitiative],
   )
 
   /** Собирает строку формы из сохранённого броска: формула плюс метка. */
@@ -561,9 +555,9 @@ export const App = () => {
     })
   }, [])
 
-  const togglePostToBoard = useCallback((next: boolean) => {
-    setPostToBoard(next)
-    writeGlobal(POST_TO_BOARD_KEY, next)
+  const togglePostInitiative = useCallback((next: boolean) => {
+    setPostInitiative(next)
+    writeGlobal(POST_INITIATIVE_KEY, next)
   }, [])
 
   const playerName = character || user?.name || t.player.fallbackName
@@ -592,6 +586,8 @@ export const App = () => {
       key={scoped ? "board" : "pending"}
       connected={status === "connected" && scoped}
       selfId={playerId}
+      postToBoard={postInitiative}
+      onTogglePostToBoard={togglePostInitiative}
       onRoll={rollCombat}
     />
   )
@@ -637,7 +633,6 @@ export const App = () => {
           formula={formula}
           error={error}
           formulaHistory={formulaHistory}
-          postToBoard={postToBoard}
           combat={combat}
           onFormulaChange={setFormula}
           onDismissError={() => setError(null)}
@@ -646,7 +641,6 @@ export const App = () => {
           onSaveShared={saveShared}
           onRepeat={repeatEntry}
           onSaveEntry={saveEntryToMine}
-          onTogglePostToBoard={togglePostToBoard}
           onOpenHelp={() => setHelpOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
         >
@@ -702,28 +696,21 @@ export const App = () => {
           ))}
       </section>
 
-      <FormulaBar
-        formula={formula}
-        error={error}
-        formulaHistory={formulaHistory}
-        onFormulaChange={setFormula}
-        onRoll={roll}
-        onSaveCurrent={() => savePresetNow(formula)}
-      />
+      {/* У боя своя кнопка броска, а место под ним нужнее журналу. */}
+      {(diceCollapsed || panel !== "combat") && (
+        <FormulaBar
+          formula={formula}
+          error={error}
+          formulaHistory={formulaHistory}
+          onFormulaChange={setFormula}
+          onRoll={roll}
+          onSaveCurrent={() => savePresetNow(formula)}
+        />
+      )}
 
       {modals}
 
       <RollLog entries={entries} currentUserId={playerId} onRepeat={repeatEntry} onSave={savePresetFromEntry} />
-
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={postToBoard}
-          disabled={status !== "connected"}
-          onChange={(event) => togglePostToBoard((event.target as HTMLInputElement).checked)}
-        />
-        {t.postToBoard}
-      </label>
     </div>
     </LangContext.Provider>
   )

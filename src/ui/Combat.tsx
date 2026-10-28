@@ -45,6 +45,9 @@ interface Props {
   connected: boolean
   /** Сам мастер в списке не нужен: за себя он заводит монстров руками. */
   selfId: string
+  /** Класть ли порядок ходов стикерами на доску. */
+  postToBoard: boolean
+  onTogglePostToBoard: (next: boolean) => void
   onRoll: (combatants: Combatant[]) => void
 }
 
@@ -90,7 +93,7 @@ const without = <T,>(record: Record<string, T>, key: string): Record<string, T> 
  * мастера запоминается вместе с галочками участия: кидают часто, а состав и
  * формулы почти не меняются.
  */
-export const Combat = ({ connected, selfId, onRoll }: Props) => {
+export const Combat = ({ connected, selfId, postToBoard, onTogglePostToBoard, onRoll }: Props) => {
   const t = useT()
   const [roster, setRoster] = useState<Record<string, Known>>(() => readRecord(ROSTER_KEY, isKnown))
   const [onlineIds, setOnlineIds] = useState<Set<string>>(() => new Set())
@@ -162,12 +165,12 @@ export const Combat = ({ connected, selfId, onRoll }: Props) => {
   const isIncluded = (row: PlayerRow): boolean => included[row.userId] ?? Boolean(formulaOf(row).trim())
 
   // Ушедший остаётся, только если про него есть что помнить: формула или имя.
-  // Зритель без формулы, закрывший доску, из списка уходит.
+  // Зритель без формулы, закрывший доску, из списка уходит. Порядок — в каком
+  // игроки появились: сортировка по имени швыряла строку, пока мастер его правит.
   const players: PlayerRow[] = Object.entries(roster)
     .filter(([userId]) => userId !== selfId)
     .map(([userId, known]) => ({ ...known, userId, online: onlineIds.has(userId) }))
     .filter((row) => row.online || formulaOf(row).trim() !== "" || Boolean(names[row.userId]?.trim()))
-    .sort((a, b) => displayName(a).localeCompare(displayName(b)))
 
   const saveMonsters = (next: MonsterItem[]): void => {
     setMonsters(next)
@@ -422,10 +425,21 @@ export const Combat = ({ connected, selfId, onRoll }: Props) => {
 
         {error && <div className="error">{error}</div>}
 
-        <button className="btn btn--primary combat__roll" onClick={roll}>
-          <SwordsIcon />
-          {t.combat.roll}
-        </button>
+        <div className="combat__actions">
+          <button className="btn btn--primary combat__roll" onClick={roll}>
+            <SwordsIcon />
+            {t.combat.roll}
+          </button>
+          <label className="combat__post" title={t.combat.postTitle}>
+            <input
+              type="checkbox"
+              checked={postToBoard}
+              disabled={!connected}
+              onChange={(event) => onTogglePostToBoard((event.target as HTMLInputElement).checked)}
+            />
+            {t.combat.post}
+          </label>
+        </div>
       </div>
     </div>
   )
