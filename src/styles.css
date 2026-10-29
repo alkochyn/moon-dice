@@ -1231,6 +1231,18 @@ button {
   color: var(--muted);
 }
 
+.modal__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal__check input {
+  margin: 0;
+}
+
 /* Липкий низ окна: до кнопки закрытия не надо долистывать. */
 .modal__footer {
   position: sticky;

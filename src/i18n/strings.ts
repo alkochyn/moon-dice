@@ -184,6 +184,9 @@ const en = {
     skinHint: "Terminal is a dark console-style panel with hotkeys F1–F4 for your first four saved rolls.",
     initiative: "Initiative",
     initiativeHint: "The GM rolls it for everyone at the start of a fight. Empty means 1d20.",
+    stats: "Send anonymous usage stats",
+    statsHint:
+      "Only counts: how many boards use the panel, how often it opens and how many rolls are made. No names and no roll results; board and player ids are hashed.",
     showDiagnostics: "diagnostics",
     hideDiagnostics: "hide diagnostics",
     cancel: "Cancel",
@@ -532,6 +535,9 @@ const ru: Strings = {
     skinHint: "Терминал — тёмная панель в духе консоли, первые четыре своих броска висят на F1–F4.",
     initiative: "Инициатива",
     initiativeHint: "Мастер кидает её за всех в начале боя. Пусто — значит 1d20.",
+    stats: "Отправлять обезличенную статистику",
+    statsHint:
+      "Только счётчики: сколько досок пользуется панелью, как часто её открывают и сколько кидают. Ни имён, ни результатов бросков; id доски и игрока хэшируются.",
     showDiagnostics: "диагностика",
     hideDiagnostics: "скрыть диагностику",
     cancel: "Отмена",

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks"
 
 import type { BoardStatus } from "../board/sdk"
+import { statsConfigured } from "../board/stats"
 import { DICE_SETS } from "../data/diceSets"
 import { validateFormula } from "../dice"
 import { LANGS, useT, type Lang } from "../i18n"
@@ -27,10 +28,12 @@ interface Props extends PlayerLook {
   diceSet: string
   lang: Lang
   skin: Skin
+  stats: boolean
   onSave: (look: PlayerLook) => void
   onDiceSetChange: (id: string) => void
   onLangChange: (lang: Lang) => void
   onSkinChange: (skin: Skin) => void
+  onStatsChange: (enabled: boolean) => void
   onClose: () => void
 }
 
@@ -44,10 +47,12 @@ export const PlayerSettings = ({
   diceSet,
   lang,
   skin,
+  stats,
   onSave,
   onDiceSetChange,
   onLangChange,
   onSkinChange,
+  onStatsChange,
   onClose,
 }: Props) => {
   const t = useT()
@@ -55,6 +60,7 @@ export const PlayerSettings = ({
   const [pickedSet, setPickedSet] = useState(diceSet)
   const [pickedLang, setPickedLang] = useState(lang)
   const [pickedSkin, setPickedSkin] = useState(skin)
+  const [pickedStats, setPickedStats] = useState(stats)
   const [pickedIcon, setPickedIcon] = useState(icon)
   const [pickedColor, setPickedColor] = useState(color)
   const [initiativeFormula, setInitiativeFormula] = useState(initiative)
@@ -95,6 +101,7 @@ export const PlayerSettings = ({
     onDiceSetChange(pickedSet)
     onLangChange(pickedLang)
     onSkinChange(pickedSkin)
+    onStatsChange(pickedStats)
     onClose()
   }
 
@@ -231,6 +238,21 @@ export const PlayerSettings = ({
             ))}
           </select>
         </label>
+
+        {/* Без адреса приёмника в сборке статистики нет вовсе — и галочка ни к чему. */}
+        {statsConfigured() && (
+          <div className="modal__field">
+            <label className="modal__check">
+              <input
+                type="checkbox"
+                checked={pickedStats}
+                onChange={(event) => setPickedStats((event.target as HTMLInputElement).checked)}
+              />
+              {t.settings.stats}
+            </label>
+            <span className="modal__hint">{t.settings.statsHint}</span>
+          </div>
+        )}
 
         <div className="modal__field">
           <button className="btn btn--ghost modal__diag-toggle" onClick={() => setDiagnosticsOpen((open) => !open)}>

@@ -25,7 +25,9 @@ const MAX_BYTES = 320 * 1024
 const MAX_GZIP_BYTES = 125 * 1024
 // perchance.org — не зависимость загрузки, а адрес, куда вкладка таблиц
 // ходит за кодом генератора по клику игрока. Панель без него работает целиком.
-const ALLOWED_HOSTS = ["miro.com", "perchance.org"]
+// script.google.com — приёмник статистики: событие уходит sendBeacon'ом уже
+// после загрузки, ответа панель не ждёт.
+const ALLOWED_HOSTS = ["miro.com", "perchance.org", "script.google.com"]
 // Не сетевые адреса, а XML-пространства имён из Preact: за ними никто не ходит.
 const NAMESPACE_PREFIXES = ["http://www.w3.org/"]
 

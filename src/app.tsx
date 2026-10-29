@@ -35,6 +35,7 @@ import { postRollToBoard, STICKY_PALETTE, type Sticker } from "./board/post"
 import { publishProfile } from "./board/players"
 import { rollInitiative, type Combatant } from "./combat/initiative"
 import { readGlobal, readScoped, resolveScope, writeGlobal, writeScoped } from "./board/scope"
+import { countRoll, reportOpen, setStatsEnabled, statsEnabled } from "./board/stats"
 import { StatusBar } from "./ui/StatusBar"
 import { DiceBar } from "./ui/DiceBar"
 import { PlayerBar } from "./ui/PlayerBar"
@@ -130,6 +131,7 @@ export const App = () => {
   const [helpOpen, setHelpOpen] = useState(false)
   const [lang, setLang] = useState<Lang>(initialLang)
   const [skin, setSkin] = useState<Skin>(initialSkin)
+  const [stats, setStats] = useState(statsEnabled)
   const t = STRINGS[lang]
 
   const changePanel = useCallback((next: Panel) => {
@@ -240,6 +242,12 @@ export const App = () => {
     }
   }, [])
 
+  // Открытие считаем, только когда доска ответила: без неё нечего считать.
+  // Язык и облик меняются на ходу — с ними уйдёт и следующая пачка бросков.
+  useEffect(() => {
+    if (status === "connected" && stats) reportOpen({ lang, skin })
+  }, [status, stats, lang, skin])
+
   const applyBoardEntries = useCallback((boardEntries: RollEntry[]) => {
     setEntries((prev) => {
       const merged = nextEntries(prev, boardEntries)
@@ -328,6 +336,8 @@ export const App = () => {
    * инициатива — обычные броски живут в журнале и доску не засоряют.
    */
   const publish = useCallback((entry: RollEntry, stickers: Sticker[] = []) => {
+    countRoll(entry.kind ?? "dice")
+
     // Своя запись показывается сразу, не дожидаясь ответа доски.
     setEntries((prev) => {
       const merged = mergeEntries(prev, [entry])
@@ -616,6 +626,11 @@ export const App = () => {
     writeGlobal(SKIN_KEY, next)
   }, [])
 
+  const changeStats = useCallback((next: boolean) => {
+    setStats(next)
+    setStatsEnabled(next)
+  }, [])
+
   const toggleDiceCollapsed = useCallback(() => {
     setDiceCollapsed((collapsed) => {
       writeGlobal(DICE_COLLAPSED_KEY, !collapsed)
@@ -683,11 +698,13 @@ export const App = () => {
           diceSet={diceSet}
           lang={lang}
           skin={skin}
+          stats={stats}
           {...(user ? { accountName: user.name } : {})}
           onSave={savePlayerLook}
           onDiceSetChange={changeDiceSet}
           onLangChange={changeLang}
           onSkinChange={changeSkin}
+          onStatsChange={changeStats}
           onClose={() => setSettingsOpen(false)}
         />
       )}
