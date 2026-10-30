@@ -84,9 +84,11 @@ function setup() {
   sheet.clear()
 
   // Столбцы events: A ts, B month, C ev, D board, E user, F team, J..L броски.
+  // Не COUNTUNIQUE(FILTER(…)): на пустом листе FILTER отдаёт #N/A, а
+  // COUNTUNIQUE считает эту ошибку за одно значение и показывает единицу.
   const unique = (column, extra) =>
-    `=IFERROR(COUNTUNIQUE(FILTER(events!${column}2:${column}, events!${column}2:${column}<>""${extra || ""})), 0)`
-  const recent = ", events!A2:A>=NOW()-30"
+    `=COUNTUNIQUEIFS(events!${column}2:${column}, events!${column}2:${column}, "<>"${extra || ""})`
+  const recent = `, events!A2:A, ">="&(NOW()-30)`
   const opens = (ev) => `=COUNTIFS(events!C2:C, "${ev}", events!A2:A, ">="&(NOW()-30))`
   const rolls = (column) => `SUMIFS(events!${column}2:${column}, events!A2:A, ">="&(NOW()-30))`
 
@@ -119,7 +121,8 @@ function setup() {
       "Бросков всего",
     ],
     [
-      `=SORT(UNIQUE(FILTER(events!B2:B, events!B2:B<>"")), 1, FALSE)`,
+      // Пока событий нет, FILTER падает в #N/A — пустая строка честнее.
+      `=IFERROR(SORT(UNIQUE(FILTER(events!B2:B, events!B2:B<>"")), 1, FALSE), "")`,
       byMonth("E"),
       byMonth("D"),
       byMonth("F"),
