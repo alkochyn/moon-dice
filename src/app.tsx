@@ -46,7 +46,8 @@ import { RollLog } from "./ui/RollLog"
 import { PlayerSettings, type PlayerLook } from "./ui/PlayerSettings"
 import { Help } from "./ui/Help"
 import { Combat } from "./ui/Combat"
-import { readInputValues, Tables, type TableRoll } from "./ui/Tables"
+import { readInputValues } from "./board/tables"
+import { Tables, type TableRoll } from "./ui/Tables"
 import { PerchanceError, rollTable } from "./perchance"
 import { defaultColor, defaultIconId } from "./utils/avatar"
 import { DEFAULT_SKIN, isSkin, type Skin } from "./skins"
@@ -681,7 +682,7 @@ export const App = () => {
 
   const tables = (
     // Таблицы, как и бой, читают свой набор из копии доски при монтировании.
-    <Tables key={scoped ? "board" : "pending"} onRolled={publishTable} />
+    <Tables key={scoped ? "board" : "pending"} connected={status === "connected" && scoped} onRolled={publishTable} />
   )
 
   const modals = (

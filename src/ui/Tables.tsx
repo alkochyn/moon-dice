@@ -1,7 +1,16 @@
-import { useRef, useState } from "preact/hooks"
+import { useEffect, useRef, useState } from "preact/hooks"
 
 import { newId } from "../board/log"
 import { readScoped, writeScoped } from "../board/scope"
+import {
+  mergeTables,
+  readInputValues,
+  readSharedTable,
+  readSharedTables,
+  subscribeSharedTables,
+  updateSharedTables,
+  type SharedTable,
+} from "../board/tables"
 import { describePerchanceError, useT } from "../i18n"
 import {
   generatorInputs,
@@ -11,28 +20,26 @@ import {
   parseGeneratorName,
   PerchanceError,
   rollTable,
-  type GeneratorInput,
   type InputValues,
 } from "../perchance"
 import { HelpIcon, ScrollIcon } from "./icons"
 
-/** Набор таблиц принадлежит доске, как и монстры мастера: у другой партии свои. */
+/**
+ * Копия таблиц этой доски у игрока: список — как на доске, плюс что игрок
+ * выбрал в каждой таблице. Без доски (локальный режим) это и есть список.
+ */
 const TABLES_KEY = "dice.tables.v1"
+/** Свои таблицы уже отданы доске: дальше список ведёт доска, а копия его повторяет. */
+const SYNCED_KEY = "dice.tables.synced.v1"
+/** Как и журнал, общий список не держится на одной подписке: onValue на живой доске доезжает не всегда. */
+const POLL_INTERVAL_MS = 4000
 
 /** В поле генератора вводят модификатор или пару слов, а не простыню: она поехала бы в журнал. */
 const MAX_INPUT_LENGTH = 40
 
-/**
- * Таблица в списке: генератор, какой список в нём кидать и что было доступно
- * при загрузке. Поля и введённое в них — у таблиц, добавленных до полей, пусто.
- */
-interface TableItem {
-  id: string
-  generator: string
-  title: string
+/** Таблица в списке: общая часть с доски и личный выбор — какой список кидать и что введено в поля. */
+interface TableItem extends SharedTable {
   list: string
-  lists: string[]
-  inputs: GeneratorInput[]
   values: InputValues
 }
 
@@ -45,45 +52,38 @@ export interface TableRoll {
 }
 
 interface Props {
+  /** Доска на связи и пространство поднято: список таблиц общий для партии. */
+  connected: boolean
   onRolled: (table: TableRoll, text: string) => void
-}
-
-/** Введённое в поля — из хранилища или чужой записи журнала: берём только строки. */
-export const readInputValues = (value: unknown): InputValues =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? Object.fromEntries(
-        Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-      )
-    : {}
-
-const isInput = (value: unknown): value is GeneratorInput => {
-  const input = value as GeneratorInput | null
-  return typeof input?.name === "string" && typeof input.label === "string"
-}
-
-const isItem = (value: unknown): value is Omit<TableItem, "inputs" | "values"> => {
-  const item = value as TableItem | null
-  return (
-    typeof item?.id === "string" &&
-    typeof item.generator === "string" &&
-    typeof item.title === "string" &&
-    typeof item.list === "string" &&
-    Array.isArray(item.lists)
-  )
 }
 
 const readTables = (): TableItem[] => {
   const parsed = readScoped<unknown>(TABLES_KEY, [])
   if (!Array.isArray(parsed)) return []
-  return parsed.filter(isItem).map((item) => {
-    const stored = item as Partial<TableItem>
-    return {
-      ...item,
-      inputs: Array.isArray(stored.inputs) ? stored.inputs.filter(isInput) : [],
-      values: readInputValues(stored.values),
-    }
+  return parsed.flatMap((value) => {
+    const table = readSharedTable(value)
+    if (!table) return []
+    const stored = value as Partial<TableItem>
+    const list = typeof stored.list === "string" ? stored.list : (table.lists[0] ?? "")
+    return [{ ...table, list, values: readInputValues(stored.values) }]
   })
 }
+
+const toShared = ({ id, generator, title, lists, inputs }: TableItem): SharedTable => ({
+  id,
+  generator,
+  title,
+  lists,
+  inputs,
+})
+
+/** Список и порядок — с доски, а выбор в каждой таблице — из своей копии. */
+const withChoices = (board: SharedTable[], local: TableItem[]): TableItem[] =>
+  board.map((table) => {
+    const mine = local.find((item) => item.id === table.id)
+    const list = mine && table.lists.includes(mine.list) ? mine.list : (table.lists[0] ?? "")
+    return { ...table, list, values: mine?.values ?? {} }
+  })
 
 /** В бросок идут все объявленные поля, даже пустые: на странице perchance они тоже всегда есть. */
 const valuesFor = (item: TableItem): InputValues =>
@@ -93,8 +93,9 @@ const valuesFor = (item: TableItem): InputValues =>
  * Вкладка таблиц: игрок вставляет ссылку на генератор perchance, панель
  * забирает код его списков и дальше кидает по нему сама. Страница
  * генератора с её оформлением сюда не едет — только текст результата.
+ * Подключённый генератор появляется у всей партии на этой доске.
  */
-export const Tables = ({ onRolled }: Props) => {
+export const Tables = ({ connected, onRolled }: Props) => {
   const t = useT()
   const [items, setItems] = useState<TableItem[]>(readTables)
   const [draft, setDraft] = useState("")
@@ -108,12 +109,72 @@ export const Tables = ({ onRolled }: Props) => {
   itemsRef.current = items
 
   const save = (next: TableItem[]): void => {
+    // Опрос доски приносит тот же список раз в несколько секунд — перерисовывать незачем.
+    if (JSON.stringify(next) === JSON.stringify(itemsRef.current)) return
+    itemsRef.current = next
     setItems(next)
     writeScoped(TABLES_KEY, next)
   }
 
+  useEffect(() => {
+    if (!connected) return undefined
+    let alive = true
+    let stop = (): void => {}
+    let poll: ReturnType<typeof setInterval> | undefined
+    const apply = (board: SharedTable[]): void => {
+      if (alive) save(withChoices(board, itemsRef.current))
+    }
+
+    void (async () => {
+      // Таблицы, подключённые до общего списка, были только у того, кто их
+      // подключил. Отдаём их доске один раз: потом копия лишь повторяет доску,
+      // иначе убранная партией таблица воскресала бы из чьей-то старой копии.
+      if (!readScoped<boolean>(SYNCED_KEY, false)) {
+        const local = itemsRef.current.map(toShared)
+        if (local.length > 0 && (await updateSharedTables((board) => mergeTables(board, local))) === null) return
+        writeScoped(SYNCED_KEY, true)
+      }
+      if (!alive) return
+
+      const board = await readSharedTables()
+      if (board) apply(board)
+      if (!alive) return
+
+      stop = subscribeSharedTables(apply)
+      poll = setInterval(() => {
+        if (document.hidden) return
+        void readSharedTables().then((next) => next && apply(next))
+      }, POLL_INTERVAL_MS)
+    })()
+
+    return () => {
+      alive = false
+      stop()
+      clearInterval(poll)
+    }
+  }, [connected])
+
   const describe = (failure: unknown): string =>
     failure instanceof PerchanceError ? describePerchanceError(t, failure) : t.perchanceErrors.network("")
+
+  /** Правка общего списка: на доске, если она на связи, иначе — только у себя. */
+  const changeList = async (
+    change: (tables: SharedTable[]) => SharedTable[],
+    local: TableItem[],
+  ): Promise<boolean> => {
+    if (!connected) {
+      save(local)
+      return true
+    }
+
+    const board = await updateSharedTables(change)
+    if (!board) {
+      setError(t.tables.shareFailed)
+      return false
+    }
+    save(withChoices(board, local))
+    return true
+  }
 
   const add = async (): Promise<void> => {
     if (busy) return
@@ -137,14 +198,22 @@ export const Tables = ({ onRolled }: Props) => {
         inputs: generatorInputs(bundle),
         values: {},
       }
-      save([...itemsRef.current, item])
-      setDraft("")
-      setError(null)
+      if (await changeList((tables) => [...tables, toShared(item)], [...itemsRef.current, item])) {
+        setDraft("")
+        setError(null)
+      }
     } catch (failure) {
       setError(describe(failure))
     } finally {
       setBusy(null)
     }
+  }
+
+  const remove = (id: string): void => {
+    void changeList(
+      (tables) => tables.filter((table) => table.id !== id),
+      itemsRef.current.filter((item) => item.id !== id),
+    )
   }
 
   const roll = async (item: TableItem): Promise<void> => {
@@ -164,6 +233,7 @@ export const Tables = ({ onRolled }: Props) => {
 
   const listLabel = (list: string): string => list || t.tables.main
 
+  /** Выбор в таблице личный: на доску не уходит. */
   const update = (id: string, change: (item: TableItem) => TableItem): void =>
     save(itemsRef.current.map((other) => (other.id === id ? change(other) : other)))
 
@@ -227,9 +297,9 @@ export const Tables = ({ onRolled }: Props) => {
 
             <button
               className="btn btn--ghost btn--icon"
-              onClick={() => save(itemsRef.current.filter((other) => other.id !== item.id))}
-              aria-label={t.tables.remove(item.title)}
-              title={t.tables.remove(item.title)}
+              onClick={() => remove(item.id)}
+              aria-label={connected ? t.tables.removeShared(item.title) : t.tables.remove(item.title)}
+              title={connected ? t.tables.removeShared(item.title) : t.tables.remove(item.title)}
             >
               ×
             </button>
